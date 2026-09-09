@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import ast
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -54,6 +54,12 @@ class LayerRule:
     allowed_internal: frozenset[str]
     reason: str
     forbidden_modules: frozenset[str] = frozenset()
+    #: Modules permitted imports the rest of their layer is denied, keyed by the
+    #: exact module name. A composition root crosses layers by definition: its
+    #: whole job is to know which concrete thing satisfies which protocol. The
+    #: exemption is named rather than pattern-matched, so it cannot widen by
+    #: accident, and a test asserts every other module in the layer still fails.
+    composition_roots: dict[str, frozenset[str]] = field(default_factory=dict)
 
 
 # The standard library's doors to the outside world. Named explicitly in
@@ -125,6 +131,14 @@ LAYER_RULES: dict[str, LayerRule] = {
             "Adapters are replaceable and each has a fake twin. An adapter that "
             "imports a use case has inverted the dependency and cannot be swapped."
         ),
+        composition_roots={
+            # ARCHITECTURE.md section 4.3 names this the composition root: the
+            # one module that constructs concrete adapters and hands back
+            # protocol-typed handles. It therefore has to name the container it
+            # fills and the policy it installs. Nothing else in infrastructure
+            # may import application at all.
+            "infrastructure.factory": frozenset({"application.deps", "application.budget"}),
+        },
     ),
     "app": LayerRule(
         allowed_external=None,
@@ -212,8 +226,12 @@ def _layer_of(module: str) -> str | None:
     return top_level if top_level in LAYER_RULES else None
 
 
-def _permits(rule: LayerRule, imported: str) -> bool:
+def _permits(rule: LayerRule, imported: str, module: str = "") -> bool:
     top_level = imported.split(".", 1)[0]
+
+    exempt = rule.composition_roots.get(module, frozenset())
+    if any(imported == allowed or imported.startswith(f"{allowed}.") for allowed in exempt):
+        return True
 
     if top_level in rule.forbidden_modules:
         return False
@@ -252,7 +270,7 @@ def check_tree(root: Path) -> list[Violation]:
             continue
         rule = LAYER_RULES[layer]
         for imported in _imports_of(path, root):
-            if not _permits(rule, imported):
+            if not _permits(rule, imported, module):
                 violations.append(Violation(module=module, imported=imported, layer=layer))
     return violations
 
@@ -358,7 +376,7 @@ def test_checker_allows_the_legitimate_imports(tmp_path: Path) -> None:
         "domain/rules/aggregate.py",
         "from __future__ import annotations\n"
         "import math\n"
-        "from dataclasses import dataclass\n"
+        "from dataclasses import dataclass, field\n"
         "from pydantic import BaseModel\n"
         "from domain.contracts import Evidence\n",
     )
@@ -381,3 +399,23 @@ def test_checker_resolves_relative_imports(tmp_path: Path) -> None:
     _write(tmp_path, "app/pages/queue.py", "from ...pipeline import assess\n")
     violations = check_tree(tmp_path)
     assert [v.imported for v in violations] == ["pipeline"]
+
+
+def test_the_composition_root_exemption_is_one_module_wide(tmp_path: Path) -> None:
+    """Only infrastructure.factory may reach into application. Any other adapter
+    doing the same is still a violation, so the exemption cannot widen by
+    someone copying the import."""
+    _write(tmp_path, "infrastructure/factory.py", "from application.deps import Deps\n")
+    _write(tmp_path, "infrastructure/storage/sqlite/runs.py", "from application.deps import Deps\n")
+
+    violations = check_tree(tmp_path)
+
+    assert [v.module for v in violations] == ["infrastructure.storage.sqlite.runs"]
+
+
+def test_the_composition_root_may_not_import_the_pipeline(tmp_path: Path) -> None:
+    """The exemption names two modules, not the application package. A factory
+    reaching into pipeline internals would be wiring by reaching through."""
+    _write(tmp_path, "infrastructure/factory.py", "from pipeline import assess\n")
+
+    assert [v.imported for v in check_tree(tmp_path)] == ["pipeline"]

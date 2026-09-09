@@ -69,7 +69,18 @@ class RunRepository(Protocol):
         """
         ...
 
-    def mark_node_complete(self, run_id: UUID, node: str, status: RunStatus) -> None: ...
+    def mark_node_complete(self, run_id: UUID, node: str, status: RunStatus) -> None:
+        """Record that a node finished successfully and advance the status.
+
+        Only for a node that actually succeeded. A failed node written here
+        would be skipped on resume, which turns a retryable failure into a
+        silently missing step.
+        """
+        ...
+
+    def set_status(self, run_id: UUID, status: RunStatus) -> None:
+        """Advance the status without claiming a node completed."""
+        ...
 
     def find_stale(self, older_than_minutes: int) -> list[RunRecord]:
         """Runs that stopped mid-flight, for startup reconciliation."""

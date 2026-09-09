@@ -233,6 +233,18 @@ class SqliteRunRepository(SqliteRepository):
                 (_dumps(nodes), status.value, str(run_id)),
             )
 
+    def set_status(self, run_id: UUID, status: RunStatus) -> None:
+        """Advance the status without adding to completed_nodes.
+
+        Used when a node failed: the run moves to the node's failure state, but
+        the node is not recorded as done, so a resume retries it.
+        """
+        with write_transaction(self.connection) as write:
+            write.execute(
+                "UPDATE runs SET status = ?, version = version + 1 WHERE run_id = ?",
+                (status.value, str(run_id)),
+            )
+
     def find_stale(self, older_than_minutes: int) -> list[RunRecord]:
         """Runs that stopped mid-flight and never came back.
 
