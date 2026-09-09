@@ -1,0 +1,36 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Candidate data. Only the synthetic corpus is committed; real pilot documents
+# live outside the repository at PILOT_DATA_DIR and never enter version control.
+data/*
+!data/samples/
+
+# Evaluation output. Results are timestamped and regenerated; only the pinned
+# baseline that regressions are compared against is tracked.
+eval/results/*
+!eval/results/BASELINE
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

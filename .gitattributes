@@ -1,0 +1,11 @@
+# Normalise line endings in the repository to LF. The project is developed on
+# Windows but must run on Linux in CI and in the container, where a CRLF in the
+# Makefile or a shell script is a runtime failure.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.pdf binary
+*.docx binary
+*.sqlite binary
+*.db binary
