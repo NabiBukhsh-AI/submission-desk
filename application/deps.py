@@ -67,6 +67,7 @@ class Settings:
     token_ceiling_per_run: int = 120_000
     max_escalations_per_candidate: int = 3
     stale_run_minutes: int = 15
+    extraction_confidence_warn: float = 0.6
     reviewer_id: str = ""
     log_spans: bool = False
 

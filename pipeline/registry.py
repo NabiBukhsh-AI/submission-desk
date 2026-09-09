@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from application.deps import Deps
 from domain.contracts.enums import RunStatus
 from domain.contracts.run_state import NodeResult, NodeStatus, RunState
-from pipeline import intake
+from pipeline import extract, intake
 
 NodeFn = Callable[[RunState, Deps], NodeResult]
 
@@ -80,7 +80,7 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="EXTRACT",
-        fn=_placeholder("EXTRACT"),
+        fn=extract.node,
         success_status=RunStatus.EXTRACTED,
         failure_status=RunStatus.FAILED_TERMINAL,
         failure_message="No readable text could be taken from these documents.",

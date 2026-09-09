@@ -16,6 +16,8 @@ from pathlib import Path
 
 from application.budget import BudgetGuard
 from application.deps import Deps, Settings, SystemClock
+from infrastructure.extraction.dispatcher import Extractor
+from infrastructure.extraction.ocr import TesseractEngine
 from infrastructure.storage.blobs import BlobStore
 from infrastructure.storage.sqlite.repositories import (
     SqliteCalibrationRepository,
@@ -48,6 +50,13 @@ def settings_from_env(**overrides: object) -> Settings:
         raw = os.environ.get(name, "").strip()
         return int(raw) if raw.isdigit() else default
 
+    def _fraction(name: str, default: float) -> float:
+        raw = os.environ.get(name, "").strip()
+        try:
+            return float(raw) if raw else default
+        except ValueError:
+            return default
+
     resolved = Settings(
         db_path=os.environ.get("DATABASE_PATH") or "data/db/submission_desk.sqlite",
         blob_dir=os.environ.get("BLOB_DIR") or "data/blobs",
@@ -59,6 +68,7 @@ def settings_from_env(**overrides: object) -> Settings:
         token_ceiling_per_run=number("TOKEN_CEILING_PER_RUN", 120_000),
         max_escalations_per_candidate=number("MAX_ESCALATIONS_PER_CANDIDATE", 3),
         stale_run_minutes=number("STALE_RUN_MINUTES", 15),
+        extraction_confidence_warn=_fraction("EXTRACTION_CONFIDENCE_WARN", 0.6),
         reviewer_id=os.environ.get("REVIEWER_ID") or "",
         log_spans=flag("LOG_SPANS", False),
     )
@@ -96,6 +106,7 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         llm_cache=SqliteLlmCacheRepository(db_path),
         events=SqliteEventRepository(db_path),
         blobs=BlobStore(settings.blob_dir),
+        extractor=Extractor(ocr=TesseractEngine()),
         budget=BudgetGuard(
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,

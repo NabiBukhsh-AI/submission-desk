@@ -18,6 +18,14 @@ dependencies = [
     # Rubrics, prompts, and configuration are YAML because a recruiter edits
     # them. The stdlib has no YAML reader.
     "pyyaml>=6.0",
+    # PDF text and geometry. Chosen over pdfplumber for per-block bounding
+    # boxes, which the column heuristic needs.
+    "pymupdf>=1.24",
+    # DOCX paragraphs, runs, and tables. The stdlib can open the zip but not
+    # read the document model.
+    "python-docx>=1.1",
+    # Language detection over page samples. Small, offline, no model download.
+    "langdetect>=1.0.9",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +37,11 @@ dev = [
     # generated rather than enumerated.
     "hypothesis>=6.100",
     "types-PyYAML",
+    # Optional: the OCR bridge. Tesseract itself is a system binary, so the
+    # adapter degrades to a recorded failure when it is absent rather than
+    # pretending a scan was read.
+    "pytesseract>=0.3.10",
+    "pillow>=10.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -75,6 +88,11 @@ ignore = [
 # keyword-only, and collapsing them into a dict would remove the type checking
 # that stops two similar strings being transposed.
 "domain/identity.py" = ["PLR0913"]
+# The OCR bridge is imported inside the call because Tesseract is a system
+# binary that may not be installed. Importing at module load would make a
+# missing optional dependency break every document, including the ones that
+# need no OCR at all.
+"infrastructure/extraction/ocr.py" = ["PLC0415"]
 "domain/ports/repositories.py" = ["PLR0913"]
 "infrastructure/storage/sqlite/repositories.py" = ["PLR0913"]
 
