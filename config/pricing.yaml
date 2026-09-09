@@ -1,0 +1,32 @@
+# Prices are NOT shipped with this repository. Enter the rates for the models you
+# have bound in config/models.yaml. Until you do, all cost figures render as
+# "not configured" rather than as zero or as a guess.
+#
+# Why this file ships empty:
+#
+# A zero would read as free. A guess would be a number nobody measured, and this
+# system's whole argument is that a claim without a measurement behind it is not
+# a claim. Provider prices also change, and a stale number committed here would
+# quietly make every past report wrong.
+#
+# Token counts are always real, taken from provider usage metadata on every
+# call, so the token ceiling and the circuit breaker work whether or not this
+# file has been filled in. Only the conversion to money is missing.
+#
+# Prices are per million tokens, in USD.
+
+version: unpriced
+
+tiers:
+  tier_cheap:
+    input_per_million: null
+    output_per_million: null
+    cached_input_per_million: null
+
+  tier_strong:
+    input_per_million: null
+    output_per_million: null
+    cached_input_per_million: null
+
+  embedding:
+    input_per_million: null

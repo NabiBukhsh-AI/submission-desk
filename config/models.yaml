@@ -1,0 +1,34 @@
+# Which model each tier binds to.
+#
+# This file is the only place a provider model identifier appears. Everywhere
+# else — code, logs, chart labels, reports, this comment — says TIER_CHEAP and
+# TIER_STRONG, so swapping a model is an edit here and nothing else changes.
+#
+# That indirection is not tidiness. The routing experiment compares three
+# configurations of the same system; if a model name were written into the
+# reporting, the comparison would need rewriting every time a binding changed,
+# and the numbers would stop being comparable across runs.
+#
+# Leave these empty to run against the fake provider, which replays recorded
+# fixtures and needs no account. That is the default, and it is what `make demo`
+# and the whole test suite use.
+
+tiers:
+  tier_cheap:
+    # Provider model identifier. Read from MODEL_CHEAP_ID when unset here, so a
+    # deployment can bind models without editing a committed file.
+    model: ""
+    max_output_tokens: 2048
+    timeout_s: 60
+
+  tier_strong:
+    model: ""
+    max_output_tokens: 4096
+    timeout_s: 120
+
+  # Embeddings for the calibration index. A separate binding because an
+  # embedding model is not a chat model and sharing the field would invite
+  # someone to set one to the other.
+  embedding:
+    model: ""
+    dimensions: 0
