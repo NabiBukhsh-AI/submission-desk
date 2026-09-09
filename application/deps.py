@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
+from domain.contracts.enums import ModelTier
 from domain.ports.repositories import (
     BlobStore,
     CalibrationRepository,
@@ -71,6 +72,15 @@ class Settings:
     reviewer_id: str = ""
     log_spans: bool = False
 
+    #: Which tier each call site starts at. The routing policy may raise this;
+    #: nothing lowers it. Named by tier, never by model, so a binding swap
+    #: changes config/models.yaml and nothing else.
+    structure_tier: ModelTier = ModelTier.CHEAP
+    assess_tier: ModelTier = ModelTier.CHEAP
+    structure_max_input_tokens: int = 24_000
+    assess_max_input_tokens: int = 12_000
+    assess_chunk_k: int = 6
+
 
 @dataclass(frozen=True)
 class Deps:
@@ -105,4 +115,5 @@ class Deps:
     sinks: tuple[Any, ...] = ()
     notifier: Any = None
     budget: Any = None
+    prompts: Any = None
     rubric_loader: Callable[[str], Any] | None = None

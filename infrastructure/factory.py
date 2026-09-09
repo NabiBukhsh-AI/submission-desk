@@ -18,6 +18,7 @@ from application.budget import BudgetGuard
 from application.deps import Deps, Settings, SystemClock
 from infrastructure.extraction.dispatcher import Extractor
 from infrastructure.extraction.ocr import TesseractEngine
+from infrastructure.prompts.registry import PromptRegistry
 from infrastructure.storage.blobs import BlobStore
 from infrastructure.storage.sqlite.repositories import (
     SqliteCalibrationRepository,
@@ -107,6 +108,7 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         events=SqliteEventRepository(db_path),
         blobs=BlobStore(settings.blob_dir),
         extractor=Extractor(ocr=TesseractEngine()),
+        prompts=PromptRegistry.load(Path(__file__).resolve().parents[1] / "prompts"),
         budget=BudgetGuard(
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,

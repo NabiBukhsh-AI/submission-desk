@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from application.deps import Deps
 from domain.contracts.enums import RunStatus
 from domain.contracts.run_state import NodeResult, NodeStatus, RunState
-from pipeline import extract, intake
+from pipeline import extract, intake, structure
 
 NodeFn = Callable[[RunState, Deps], NodeResult]
 
@@ -94,7 +94,7 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="STRUCTURE",
-        fn=_placeholder("STRUCTURE"),
+        fn=structure.node,
         success_status=RunStatus.STRUCTURED,
         failure_status=RunStatus.MANUAL_REVIEW_REQUIRED,
         required=False,

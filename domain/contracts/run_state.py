@@ -73,6 +73,11 @@ class RunState(Contract):
     calibration_enabled: bool = False
     integrity_tier: IntegrityTier = IntegrityTier.CLEAN
 
+    #: Regenerated per run. Wraps candidate text in a region the document cannot
+    #: close, because closing it needs a value chosen after the document was
+    #: written.
+    nonce: str = ""
+
     #: Set when a node produced something usable but incomplete, so the reviewer
     #: is told rather than left to notice.
     degraded_reasons: tuple[str, ...] = ()
