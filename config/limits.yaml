@@ -43,3 +43,20 @@ archive:
   max_uncompressed_bytes: 104857600   # 100 MB
   max_compression_ratio: 200
   max_xml_entities: 1000
+
+span_validation:
+  # Characters either side of a claimed offset within which a duplicate
+  # occurrence is treated as the one the model meant. Beyond it an ambiguous
+  # citation is refused, because a citation nobody can locate is not a citation.
+  offset_tolerance: 400
+  # How far around the claimed offset to search before falling back to a scan of
+  # the whole document.
+  fuzzy_search_radius: 1500
+  # Similarity at which a digitally extracted page's quotation is accepted.
+  fuzzy_threshold: 0.92
+  # Lower, because OCR confuses characters in ways a human reader would not.
+  # Applied only to pages that actually went through OCR.
+  fuzzy_ocr_threshold: 0.88
+  # These four are starting values, not findings. scripts/tune_span_thresholds.py
+  # sweeps them against real OCR evidence and fabricated spans and reports the
+  # ROC; until that has run, they are untuned defaults and are described as such.

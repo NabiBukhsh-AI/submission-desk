@@ -93,6 +93,15 @@ ignore = [
 # missing optional dependency break every document, including the ones that
 # need no OCR at all.
 "infrastructure/extraction/ocr.py" = ["PLC0415"]
+# RUF001/2/3 flag characters that look like other characters. Handling exactly
+# those characters is what these modules are for: the curly quote, the en dash
+# and the zero-width space are the subject matter, not a typo.
+"domain/provenance/normalization.py" = ["RUF001", "RUF002", "RUF003"]
+"domain/provenance/ocr_confusions.py" = ["RUF001", "RUF002", "RUF003"]
+"tests/unit/test_normalization_profile.py" = ["RUF001", "RUF002", "RUF003"]
+"tests/unit/test_span_validator.py" = ["RUF001", "RUF002", "RUF003"]
+"tests/unit/test_span_validator_ocr.py" = ["RUF001", "RUF002", "RUF003"]
+"tests/property/test_offset_map.py" = ["RUF001", "RUF002", "RUF003"]
 "domain/ports/repositories.py" = ["PLR0913"]
 "infrastructure/storage/sqlite/repositories.py" = ["PLR0913"]
 
