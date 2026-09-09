@@ -83,7 +83,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Tests may use assert-heavy, longer-bodied functions.
-"tests/**" = ["PLR2004", "PLC0415"]
+"tests/**" = ["PLR2004", "PLC0415", "PLR0913", "PLR0917"]
 # content_key and the event append take many arguments on purpose: every one is
 # keyword-only, and collapsing them into a dict would remove the type checking
 # that stops two similar strings being transposed.
@@ -104,6 +104,14 @@ ignore = [
 "tests/property/test_offset_map.py" = ["RUF001", "RUF002", "RUF003"]
 "domain/ports/repositories.py" = ["PLR0913"]
 "infrastructure/storage/sqlite/repositories.py" = ["PLR0913"]
+# The routed policy has one return per trigger, which is the table it
+# implements. Collapsing them would hide the order the triggers are evaluated
+# in, and that order is the design.
+"infrastructure/models/routing/policies.py" = ["PLR0911"]
+# The assess node passes the same five things through its call chain plus a
+# keyword-only tier. Bundling them into an object would add a type whose only
+# purpose is to satisfy a count.
+"pipeline/assess.py" = ["PLR0913", "PLR0917"]
 
 # ---------------------------------------------------------------------------
 # Types

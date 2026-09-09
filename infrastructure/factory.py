@@ -18,6 +18,7 @@ from application.budget import BudgetGuard
 from application.deps import Deps, Settings, SystemClock
 from infrastructure.extraction.dispatcher import Extractor
 from infrastructure.extraction.ocr import TesseractEngine
+from infrastructure.models.routing.policies import policy_for
 from infrastructure.prompts.registry import PromptRegistry
 from infrastructure.storage.blobs import BlobStore
 from infrastructure.storage.sqlite.repositories import (
@@ -70,6 +71,10 @@ def settings_from_env(**overrides: object) -> Settings:
         max_escalations_per_candidate=number("MAX_ESCALATIONS_PER_CANDIDATE", 3),
         stale_run_minutes=number("STALE_RUN_MINUTES", 15),
         extraction_confidence_warn=_fraction("EXTRACTION_CONFIDENCE_WARN", 0.6),
+        assess_concurrency=number("ASSESS_CONCURRENCY", 4),
+        assess_chunk_k=number("ASSESS_CHUNK_K", 6),
+        assess_max_input_tokens=number("ASSESS_MAX_INPUT_TOKENS", 12_000),
+        structure_max_input_tokens=number("STRUCTURE_MAX_INPUT_TOKENS", 24_000),
         reviewer_id=os.environ.get("REVIEWER_ID") or "",
         log_spans=flag("LOG_SPANS", False),
     )
@@ -109,6 +114,7 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         blobs=BlobStore(settings.blob_dir),
         extractor=Extractor(ocr=TesseractEngine()),
         prompts=PromptRegistry.load(Path(__file__).resolve().parents[1] / "prompts"),
+        router=policy_for(settings.routing_policy_id),
         budget=BudgetGuard(
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,

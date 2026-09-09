@@ -82,6 +82,35 @@ class RunState(Contract):
     #: is told rather than left to notice.
     degraded_reasons: tuple[str, ...] = ()
 
+    # --- what one node hands the next ------------------------------------
+    #
+    # Declared rather than attached dynamically, so a reader can see what
+    # travels between nodes without reading every node. Typed as Any where the
+    # value is a contract the domain layer would otherwise have to import in a
+    # circle.
+
+    #: The role definition, loaded at CONFIG.
+    rubric: Any = None
+    #: Documents offered by the source, before INTAKE has accepted any.
+    document_refs: tuple[Any, ...] = ()
+    #: Hashes of the accepted documents, sorted. Part of the content key.
+    document_hashes: tuple[str, ...] = ()
+    #: The structured profile, from STRUCTURE.
+    profile: Any = None
+    profile_partial: bool = False
+    #: Past decisions offered as anchors, from CALIBRATE. Reference only: a
+    #: quotation taken from here resolves to a document that is not in sources
+    #: and is rejected by name.
+    calibration_block: str | None = None
+    #: One entry per criterion, from ASSESS.
+    assessments: tuple[Any, ...] = ()
+    #: The run stopped early because it reached its ceiling. Aggregation reads
+    #: this to say so rather than presenting a partial answer as a whole one.
+    budget_capped: bool = False
+    #: At least one quotation could not be found in its document. Surfaced to
+    #: the reviewer; never changes the band.
+    invalid_span_present: bool = False
+
     def with_node_complete(self, node: str, status: RunStatus) -> RunState:
         nodes = (
             self.completed_nodes if node in self.completed_nodes else (*self.completed_nodes, node)

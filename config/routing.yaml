@@ -1,0 +1,44 @@
+# When to use the stronger model.
+#
+# Three policies. Two are controls for the experiment: all_cheap and all_strong
+# bound the quality and the cost, and `routed` has to earn its place between
+# them. Switching between them is one environment variable, MODEL_ROUTING_POLICY,
+# with no code change, which is what makes the comparison cheap to run.
+#
+# The architecture does not assume routing helps. Every escalation records the
+# criterion state before and after, so `make eval-routing` can report, per
+# trigger, how often escalating actually changed an answer and what each changed
+# answer cost. A trigger that changes nothing is a finding, and turning it off
+# is a result worth publishing.
+
+policies: [all_cheap, all_strong, routed]
+default: routed
+
+routed:
+  # Trigger 0. Cost ceiling wins over quality. A criterion that cannot be
+  # assessed within budget becomes insufficient_evidence, which is honest, where
+  # an unbudgeted escalation would be a surprise on an invoice.
+  escalation_budget_floor_usd: null   # null while pricing is unconfigured
+  token_ceiling_headroom: 0.15        # do not escalate inside the last 15%
+
+  # Trigger 1. Bounded worst case per candidate.
+  max_escalations_per_candidate: 3
+
+  # Trigger 2. The criteria that decide the outcome get the better reader from
+  # the outset rather than as a repair, because a blocker read wrongly at the
+  # cheap tier costs a candidate their place.
+  start_strong_for: [high_stakes, blocker]
+
+  # Trigger 3. A span that could not be found in the document is a mechanical,
+  # non-self-reported signal that the cheap tier is fabricating. Ranked above
+  # confidence deliberately.
+  escalate_on_invalid_span: true
+
+  # Trigger 4. The brief asks for this and it is kept, but ranked below the span
+  # signal because self-reported confidence is weakly calibrated: a model is
+  # often confidently wrong and rarely uncertain about the right answer.
+  escalate_confidence_below: 0.60
+
+  # Trigger 5. Schema trouble twice usually means the cheap tier is out of its
+  # depth on this document rather than that the prompt is unclear.
+  escalate_on_repair_failure: true

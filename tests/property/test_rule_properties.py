@@ -242,19 +242,19 @@ def test_a_scoreless_band_always_explains_itself(states: list[CriterionState]) -
         assert result.requires_human_reasons
 
 
-@given(states=st.lists(scoring_states, min_size=1, max_size=6))
+@given(rest=st.lists(scoring_states, min_size=0, max_size=4))
 @settings(max_examples=200, deadline=None)
-def test_insufficient_evidence_is_never_scored_as_a_zero(
-    states: list[CriterionState],
-) -> None:
+def test_insufficient_evidence_is_never_scored_as_a_zero(rest: list[CriterionState]) -> None:
     """The candidate is never charged for the system's failure to find evidence.
 
     Replacing an unassessed criterion with an assessed zero-point one must not
     leave the score unchanged: if it did, absence and failure would be the same
     thing, which is the collapse this system exists to avoid.
+
+    The list is built with one of each rather than filtered for, so every
+    generated example exercises the property instead of most being discarded.
     """
-    assume(any(state is CriterionState.INSUFFICIENT_EVIDENCE for state in states))
-    assume(any(state is CriterionState.MET for state in states))
+    states = [CriterionState.INSUFFICIENT_EVIDENCE, CriterionState.MET, *rest]
 
     role = rubric(
         criteria=[criterion(id=f"c-{i:02d}", weight=2) for i in range(len(states))],

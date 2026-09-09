@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from application.deps import Deps
 from domain.contracts.enums import RunStatus
 from domain.contracts.run_state import NodeResult, NodeStatus, RunState
-from pipeline import extract, intake, structure
+from pipeline import assess, extract, intake, structure
 
 NodeFn = Callable[[RunState, Deps], NodeResult]
 
@@ -110,7 +110,7 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="ASSESS",
-        fn=_placeholder("ASSESS"),
+        fn=assess.node,
         success_status=RunStatus.ASSESSED,
         failure_status=RunStatus.MANUAL_REVIEW_REQUIRED,
         failure_message="The assessment could not be completed.",

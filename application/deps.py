@@ -81,6 +81,10 @@ class Settings:
     assess_max_input_tokens: int = 12_000
     assess_chunk_k: int = 6
 
+    #: Criteria assessed in parallel. Safe because criteria are independent, and
+    #: results are restored to rubric order before anything reads them.
+    assess_concurrency: int = 4
+
 
 @dataclass(frozen=True)
 class Deps:
