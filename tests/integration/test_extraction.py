@@ -23,6 +23,7 @@ from infrastructure.extraction.ocr import (
     MIN_CONFIDENCE,
     TesseractEngine,
     UnavailableOcrEngine,
+    find_binary,
     read_with_retry,
 )
 from infrastructure.extraction.pdf import OCR_TRIGGER_CHARS, open_document
@@ -31,6 +32,13 @@ from infrastructure.storage.sqlite.connection import close_thread_connection
 from pipeline.extract import node
 from tests.fixtures import documents, pdfs
 from tests.workflow.conftest import make_run_record
+
+#: The reader is a system binary. Where it is absent the tests that need it
+#: skip rather than fail, so the suite stays green on a machine that has not
+#: installed it, and the ones that do not need it still prove the fallback is
+#: recorded honestly.
+HAS_OCR = TesseractEngine().available
+needs_ocr = pytest.mark.skipif(not HAS_OCR, reason="Tesseract is not installed on this machine")
 
 PDF_MIME = "application/pdf"
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -543,3 +551,126 @@ def test_the_ocr_trigger_is_per_page_not_per_document() -> None:
     """A CV that is digital on page one and a photograph on page three is
     normal. The threshold is a page property."""
     assert OCR_TRIGGER_CHARS > 0
+
+
+# --- OCR against the real reader ---------------------------------------------------
+
+
+@needs_ocr
+def test_the_reader_is_found_even_when_it_is_not_on_the_path() -> None:
+    """The usual Windows installer does not add Tesseract to the PATH, so a
+    recruiter who installed it correctly would otherwise be told it is
+    missing."""
+    assert find_binary() is not None
+
+
+@needs_ocr
+def test_a_rendered_page_is_read_back() -> None:
+    """The whole OCR path, end to end: render text to an image, read it back.
+
+    Written against a page whose text is known, so the assertion is about
+    whether the reader works rather than about what a scan happens to contain.
+    """
+    import pymupdf
+
+    document_ = pymupdf.open()
+    page = document_.new_page()
+    page.insert_textbox(
+        pymupdf.Rect(50, 50, 545, 400),
+        "Owned a multi-service payments backend and its on-call rotation.",
+        fontsize=16,
+    )
+    image = page.get_pixmap(matrix=pymupdf.Matrix(300 / 72, 300 / 72)).tobytes("png")
+    document_.close()
+
+    result = TesseractEngine().read(image)
+
+    assert result.available
+    assert "multi-service payments backend" in result.text
+    assert result.mean_confidence > MIN_CONFIDENCE
+
+
+@needs_ocr
+def test_a_scanned_page_yields_text_through_the_extractor() -> None:
+    """A document with no text layer is read anyway, and the page records that
+    it was read by a scanner rather than copied."""
+    import pymupdf
+
+    document_ = pymupdf.open()
+    page = document_.new_page()
+    page.insert_textbox(
+        pymupdf.Rect(50, 50, 545, 400),
+        "Introduced a nightly evaluation suite that blocked releases.",
+        fontsize=16,
+    )
+    # Flatten to an image so no text layer survives.
+    image = page.get_pixmap(matrix=pymupdf.Matrix(200 / 72, 200 / 72)).tobytes("png")
+    document_.close()
+
+    flattened = pymupdf.open()
+    image_page = flattened.new_page()
+    image_page.insert_image(image_page.rect, stream=image)
+    data: bytes = flattened.tobytes()
+    flattened.close()
+
+    source = Extractor(ocr=TesseractEngine()).extract(document(), data)
+
+    assert source.pages[0].extraction_method is ExtractionMethod.OCR
+    assert "evaluation suite" in source.normalized_text
+    assert source.pages[0].ocr_confidence is not None
+
+
+@needs_ocr
+def test_a_quotation_read_off_a_scan_validates() -> None:
+    """The claim this whole subsystem exists to support: evidence quoted from a
+    scanned page can still be located in the source and shown to a reviewer."""
+    import pymupdf
+
+    from domain.provenance.validator import validate
+    from tests.builders import evidence as build_evidence
+    from tests.builders import provenance as build_provenance
+
+    document_ = pymupdf.open()
+    page = document_.new_page()
+    page.insert_textbox(
+        pymupdf.Rect(50, 50, 545, 400),
+        "Owned a multi-service payments backend and its on-call rotation.",
+        fontsize=16,
+    )
+    image = page.get_pixmap(matrix=pymupdf.Matrix(200 / 72, 200 / 72)).tobytes("png")
+    document_.close()
+
+    flattened = pymupdf.open()
+    image_page = flattened.new_page()
+    image_page.insert_image(image_page.rect, stream=image)
+    data = flattened.tobytes()
+    flattened.close()
+
+    doc = document()
+    source = Extractor(ocr=TesseractEngine()).extract(doc, data)
+    quotation = "Owned a multi-service payments backend"
+
+    item = build_evidence(
+        verbatim_span=quotation,
+        provenance=build_provenance(
+            document_id=source.document_id,
+            norm_start=max(source.normalized_text.find(quotation), 0),
+            norm_end=max(source.normalized_text.find(quotation), 0) + len(quotation),
+        ),
+    )
+
+    check = validate(item, {source.document_id: source})
+
+    assert check.validation.value.startswith("valid")
+
+
+def test_the_reader_reports_its_absence_rather_than_guessing() -> None:
+    """Holds whether or not Tesseract is installed: an engine that cannot find a
+    binary says so, and says what to do about it."""
+    engine = TesseractEngine(binary=None)
+    engine.available = False
+
+    result = engine.read(b"")
+
+    assert result.available is False
+    assert "TESSERACT_BINARY" in (result.reason or "")

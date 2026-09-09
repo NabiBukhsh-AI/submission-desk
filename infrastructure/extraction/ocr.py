@@ -6,6 +6,12 @@ nothing because nobody installed the reader looks exactly like a blank page, and
 confusing those two would tell a recruiter their candidate submitted an empty
 document.
 
+Finding it is its own problem. The usual Windows installer does not put
+Tesseract on the PATH, so a recruiter who installed it correctly would still be
+told it is missing. The engine therefore looks in the standard install
+locations as well, and an explicit path can be given when it lives somewhere
+else entirely.
+
 OCR is triggered per page, never per document. A CV that is digital on page one
 and a photograph on page three is normal, and re-reading the whole file through
 OCR would throw away good text to fix a bad page.
@@ -13,7 +19,9 @@ OCR would throw away good text to fix a bad page.
 
 from __future__ import annotations
 
+import os
 import shutil
+from pathlib import Path
 
 from domain.ports.extraction import OcrResult
 
@@ -26,17 +34,48 @@ RETRY_DPI = 400
 #: One retry, never a loop.
 MIN_CONFIDENCE = 0.6
 
+#: Where the common installers put it. Checked after the PATH and after the
+#: environment override, so an explicit choice always wins.
+KNOWN_LOCATIONS = (
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    "/usr/bin/tesseract",
+    "/usr/local/bin/tesseract",
+    "/opt/homebrew/bin/tesseract",
+)
+
+
+def find_binary(name: str = "tesseract") -> str | None:
+    """Locate the reader, or report that it is not there.
+
+    Order matters: an explicit setting beats the PATH, and the PATH beats a
+    guess. Someone who has pointed at a particular build wants that build.
+    """
+    override = os.environ.get("TESSERACT_BINARY", "").strip()
+    if override:
+        return override if Path(override).exists() else None
+
+    found = shutil.which(name)
+    if found:
+        return found
+
+    for candidate in KNOWN_LOCATIONS:
+        if Path(candidate).exists():
+            return candidate
+
+    return None
+
 
 class TesseractEngine:
-    """Reads a rendered page through Tesseract, if it is installed."""
+    """Reads a rendered page through Tesseract, if it can be found."""
 
-    def __init__(self, *, binary: str = "tesseract") -> None:
-        self.binary = binary
+    def __init__(self, *, binary: str | None = None) -> None:
+        self.binary = binary or find_binary()
         # Resolved once at construction. The answer cannot change during a run,
         # and probing the filesystem per page of a sixty-page document is waste.
         # A plain attribute rather than a property, because the port declares it
         # settable so a test can stand in a stub.
-        self.available: bool = shutil.which(binary) is not None and _bridge_available()
+        self.available: bool = self.binary is not None and _bridge_available()
 
     def read(self, image_bytes: bytes, *, dpi: int = DEFAULT_DPI) -> OcrResult:
         """Read one rendered page.
@@ -45,14 +84,14 @@ class TesseractEngine:
         engine is missing, so the caller records a page it could not read
         instead of failing a whole document over a missing dependency.
         """
-        if not self.available:
+        if not self.available or self.binary is None:
             return OcrResult(
                 text="",
                 mean_confidence=0.0,
                 available=False,
                 reason=(
-                    "No optical character reader is installed, so scanned pages cannot be "
-                    "read. Install Tesseract to process scans."
+                    "No optical character reader was found, so scanned pages cannot be read. "
+                    "Install Tesseract, or set TESSERACT_BINARY to its location."
                 ),
             )
 
@@ -60,6 +99,8 @@ class TesseractEngine:
 
         import pytesseract
         from PIL import Image
+
+        pytesseract.pytesseract.tesseract_cmd = self.binary
 
         image = Image.open(io.BytesIO(image_bytes))
         data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
