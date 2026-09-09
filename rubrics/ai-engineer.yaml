@@ -1,0 +1,188 @@
+# AI Engineer.
+#
+# This file is the rubric. Edit it directly: weights, wording, cutoffs, and the
+# number of supporting quotations each point needs are all here, and changing
+# any of them changes how candidates are scored without anyone touching code.
+#
+# Two things to know before editing:
+#
+# min_supported is how many separate quotations the documents must contain
+# before a point counts as met. Raising it makes the system harder to convince.
+#
+# state_points is what each outcome is worth. insufficient_evidence is
+# deliberately absent: a point the documents never address is left out of the
+# calculation rather than counted as a zero, so a candidate is never marked down
+# for something their CV simply did not mention.
+
+role_id: ai-engineer
+role_title: AI Engineer
+version: "1.0.0"
+
+# Fraction of the rubric, by weight, that must be assessable before a score is
+# reported at all. Below this the system says it does not know enough.
+min_coverage: 0.70
+
+# Redact identity before the model reads anything, by default.
+blind_mode_default: true
+
+forbidden_attributes:
+  - age
+  - gender
+  - nationality
+  - ethnicity
+  - religion
+  - marital_status
+  - family_status
+  - disability
+  - personality
+  - culture_fit
+  - appearance
+
+notes_for_reviewer: >-
+  Every quotation below was checked against the source document before it was
+  shown to you. Anything the system could not verify was removed and is listed
+  separately.
+
+criteria:
+  - id: production-llm-delivery
+    label: Has shipped a language-model feature to real users
+    question: >-
+      Does the document show that this person shipped a system using language
+      models that was used by people outside their own team?
+    kind: high_stakes
+    weight: 5
+    min_supported: 2
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "deployed to production"
+      - "served N users"
+      - "in production since"
+      - "rolled out to the support team"
+    negative_examples:
+      - "completed a course on"
+      - "personal side project, not deployed"
+      - "prototype in a notebook"
+
+  - id: evaluation-practice
+    label: Measures quality before scaling
+    question: >-
+      Does the document show measurement of system quality, such as a benchmark,
+      an evaluation suite, an A/B test, or an error analysis?
+    kind: high_stakes
+    weight: 5
+    min_supported: 2
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "built an eval set"
+      - "measured agreement against human labels"
+      - "regression suite gating releases"
+      - "error analysis over N cases"
+    negative_examples:
+      - "used the latest model"
+      - "improved accuracy"
+
+  - id: workflow-automation
+    label: Has automated a real internal workflow end to end
+    question: >-
+      Does the document describe taking a workflow that people did by hand and
+      making it run as a system, including the parts that fail?
+    kind: standard
+    weight: 4
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "replaced a manual process"
+      - "reduced handling time from X to Y"
+      - "adopted by the operations team"
+    negative_examples:
+      - "wrote a script"
+
+  - id: production-engineering
+    label: Runs what they build
+    question: >-
+      Does the document show ownership of a system in production, such as
+      on-call, incident response, monitoring, or deployment?
+    kind: standard
+    weight: 4
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "on-call rotation"
+      - "owned the service"
+      - "cut p95 latency"
+    negative_examples:
+      - "handed over to the platform team"
+
+  - id: python-depth
+    label: Substantial Python experience
+    question: >-
+      Does the document show Python used for real systems rather than for
+      scripts or coursework?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "Python services in production"
+      - "maintained a Python library"
+
+  - id: data-handling
+    label: Works carefully with messy or sensitive data
+    question: >-
+      Does the document show handling of unstructured, multilingual, or
+      sensitive data, including what was done about quality and privacy?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "document extraction pipeline"
+      - "PII redaction"
+      - "handled scanned and multilingual inputs"
+
+  - id: cost-awareness
+    label: Treats cost as an engineering constraint
+    question: >-
+      Does the document show attention to the running cost of a system, such as
+      per-request cost, model routing, caching, or a budget ceiling?
+    kind: standard
+    weight: 2
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "reduced cost per request"
+      - "routed cheaper models for simple cases"
+      - "introduced a spend ceiling"
+
+  - id: written-communication
+    label: Explains technical work to non-technical readers
+    question: >-
+      Does the document contain writing aimed at people outside engineering,
+      such as a case study, a runbook, documentation, or a post-incident review?
+    kind: standard
+    weight: 2
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "wrote the runbook"
+      - "published a write-up"
+      - "presented to stakeholders"
+
+  # A blocker decides the outcome on its own, so it asks a narrow, checkable
+  # question. It can never decline a candidate on silence: an unaddressed
+  # blocker routes the run to a person instead.
+  - id: work-authorisation-stated
+    label: States eligibility to work in the required location
+    question: >-
+      Does the document state the candidate's eligibility to work in the
+      location this role requires?
+    kind: blocker
+    weight: 1
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.0, not_met: 0.0, contradicted: 0.0}
+
+bands:
+  - {band: advance, min_score: 0.75}
+  - {band: advance_with_reservations, min_score: 0.60}
+  - {band: hold, min_score: 0.40}
+  - {band: decline, min_score: 0.0}

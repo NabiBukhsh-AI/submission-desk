@@ -1,0 +1,24 @@
+role_id: broken-example
+role_title: Broken Example
+version: "1.0.0"
+min_coverage: 0.70
+criteria:
+  - id: first-point
+    label: First point
+    question: Does the document show evidence for this point in some verifiable way?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+  - id: first-point
+    label: Same id again
+    question: Does the document show evidence for this point in some verifiable way?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+
+bands:
+  - {band: advance, min_score: 0.75}
+  - {band: hold, min_score: 0.40}
+  - {band: decline, min_score: 0.0}

@@ -1,0 +1,70 @@
+# How the reasoning is worded for a recruiter.
+#
+# Editable without touching Python. The reviewer reads these sentences, so they
+# are written in recruiter English: no "criterion", no "aggregate", no "null".
+#
+# Each key is a rule_id from the derivation. {placeholders} are filled from the
+# step's inputs. A rule with no template here falls back to the description the
+# rule engine already wrote, so a missing entry degrades to plainer wording
+# rather than to a blank.
+
+rules:
+  R-UNASSESSED: >-
+    This point was never checked, because the run stopped early. It is not a
+    finding about the candidate.
+
+  R-CONFLICT: >-
+    The documents disagree with each other on this point. Someone should read
+    both before deciding.
+
+  R-MET: >-
+    The documents support this, with quotations you can check.
+
+  R-PARTIAL: >-
+    There is some support for this, but less than this role asks for.
+
+  R-NOT-MET: >-
+    The documents say the opposite of what this point asks for.
+
+  R-INSUFFICIENT: >-
+    The documents do not address this either way. That is not the same as the
+    candidate lacking it.
+
+  R-COVERAGE: >-
+    Evidence was found for {resolved_weight} of {total_weight} points of the
+    rubric by weight.
+
+  R-SCORE: >-
+    The score covers only the points that could be assessed. Anything the
+    documents did not address is left out of the calculation instead of counting
+    against the candidate.
+
+  R-COVERAGE-GATE: >-
+    Too little of the rubric could be assessed to place this candidate at all,
+    so no score is given. Ask for more material rather than reading this as a
+    poor result.
+
+  R-BLOCKER-FAIL: >-
+    A requirement for this role is not met, so the recommendation is Decline
+    whatever the rest of the score says.
+
+  R-BLOCKER-UNKNOWN: >-
+    A requirement for this role is not addressed in the documents. Check it with
+    the candidate. It is not a reason to decline on its own.
+
+  R-BAND: >-
+    The score places this candidate in this range for this role.
+
+  R-HUMAN-REQUIRED: >-
+    Something here needs a person's eye before anything is sent.
+
+# Why a run was routed to a reviewer. Shown as a list under the banner.
+reasons:
+  contradicted_criterion: The documents contradict each other somewhere.
+  integrity_not_clean: A document contained something a security scanner flagged.
+  invalid_span_present: A quotation could not be found in the source document and was discarded.
+  coverage_below_gate: Too little of the rubric could be assessed.
+  partial_profile: Only part of the candidate's documents could be read.
+  budget_capped: The run reached its cost ceiling before every point was checked.
+  criterion_unassessed: At least one point was never checked.
+  blocker_unknown: A requirement for this role is unaddressed in the documents.

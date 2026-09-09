@@ -15,6 +15,9 @@ license = { text = "MIT" }
 # something the standard library does adequately.
 dependencies = [
     "pydantic>=2.7,<3",
+    # Rubrics, prompts, and configuration are YAML because a recruiter edits
+    # them. The stdlib has no YAML reader.
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +25,10 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "pytest>=8.2",
+    # The three rule-engine properties are claims about all inputs, so they are
+    # generated rather than enumerated.
+    "hypothesis>=6.100",
+    "types-PyYAML",
 ]
 
 [tool.setuptools.packages.find]

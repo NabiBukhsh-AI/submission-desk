@@ -23,13 +23,14 @@ MYPY   := $(VENV_BIN)/mypy
 # The offline suite. Anything touching a real service is marked and excluded.
 OFFLINE := -m "not live"
 
-.PHONY: help setup check test schemas clean
+.PHONY: help setup check test schemas rubric-lint clean
 
 help:
 	@echo "setup    create the virtual environment and install the project"
 	@echo "check    lint, format check, types, and the offline test suite"
 	@echo "test     the offline test suite only"
 	@echo "schemas  regenerate contracts/schemas/*.json"
+	@echo "rubric-lint  validate every rubric"
 	@echo "clean    remove caches and build artefacts"
 
 setup:
@@ -50,6 +51,9 @@ test:
 
 schemas:
 	$(PY) scripts/export_schemas.py
+
+rubric-lint:
+	$(PY) scripts/rubric_lint.py
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist *.egg-info
