@@ -1,0 +1,132 @@
+{
+  "$defs": {
+    "ExtractionMethod": {
+      "enum": [
+        "digital_pdf",
+        "ocr",
+        "docx",
+        "plaintext"
+      ],
+      "title": "ExtractionMethod",
+      "type": "string"
+    },
+    "IntegrityFindingKind": {
+      "enum": [
+        "hidden_text",
+        "invisible_glyphs",
+        "instruction_pattern",
+        "metadata_instruction",
+        "encoding_obfuscation",
+        "excessive_repetition",
+        "fabricated_span",
+        "forbidden_attribute_leak"
+      ],
+      "title": "IntegrityFindingKind",
+      "type": "string"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Where a quoted span sits in one document.\n\nCross-page spans are allowed, because a sentence can straddle a page break.\nCross-document spans are not: a single quotation drawn from two files is not\na quotation, and the span validator rejects one that resolves elsewhere.",
+      "properties": {
+        "document_id": {
+          "format": "uuid",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "extraction_method": {
+          "$ref": "#/$defs/ExtractionMethod"
+        },
+        "norm_end": {
+          "minimum": 0,
+          "title": "Norm End",
+          "type": "integer"
+        },
+        "norm_start": {
+          "minimum": 0,
+          "title": "Norm Start",
+          "type": "integer"
+        },
+        "normalization_profile_id": {
+          "minLength": 1,
+          "title": "Normalization Profile Id",
+          "type": "string"
+        },
+        "page_end": {
+          "minimum": 1,
+          "title": "Page End",
+          "type": "integer"
+        },
+        "page_start": {
+          "minimum": 1,
+          "title": "Page Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "document_id",
+        "page_start",
+        "page_end",
+        "norm_start",
+        "norm_end",
+        "extraction_method",
+        "normalization_profile_id"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "detector": {
+      "minLength": 1,
+      "title": "Detector",
+      "type": "string"
+    },
+    "detector_confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Detector Confidence",
+      "type": "number"
+    },
+    "excerpt": {
+      "maxLength": 240,
+      "title": "Excerpt",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/IntegrityFindingKind"
+    },
+    "provenance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Provenance"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "severity": {
+      "$ref": "#/$defs/Severity"
+    }
+  },
+  "required": [
+    "kind",
+    "severity",
+    "detector",
+    "detector_confidence",
+    "excerpt"
+  ],
+  "title": "IntegrityFinding",
+  "type": "object"
+}

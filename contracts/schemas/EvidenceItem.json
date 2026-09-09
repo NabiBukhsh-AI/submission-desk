@@ -1,0 +1,214 @@
+{
+  "$defs": {
+    "EscalationState": {
+      "enum": [
+        "not_escalated",
+        "escalated",
+        "escalation_capped",
+        "escalation_budget_blocked"
+      ],
+      "title": "EscalationState",
+      "type": "string"
+    },
+    "EvidenceState": {
+      "description": "What one piece of evidence says about a criterion.\n\nThere is no \"probably\" and no numeric grade. Absence of evidence is its own\nstate rather than a low score, because \"the document does not say\" and \"the\ndocument says no\" are different facts about a candidate.",
+      "enum": [
+        "supported",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "EvidenceState",
+      "type": "string"
+    },
+    "ExtractionMethod": {
+      "enum": [
+        "digital_pdf",
+        "ocr",
+        "docx",
+        "plaintext"
+      ],
+      "title": "ExtractionMethod",
+      "type": "string"
+    },
+    "ModelTier": {
+      "description": "Model identity by role, never by provider name.\n\nThe binding from tier to a provider model identifier lives in\n``config/models.yaml`` and nowhere else, so a model swap is a configuration\nchange and no report, chart, or log line has to be rewritten.",
+      "enum": [
+        "tier_cheap",
+        "tier_strong"
+      ],
+      "title": "ModelTier",
+      "type": "string"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Where a quoted span sits in one document.\n\nCross-page spans are allowed, because a sentence can straddle a page break.\nCross-document spans are not: a single quotation drawn from two files is not\na quotation, and the span validator rejects one that resolves elsewhere.",
+      "properties": {
+        "document_id": {
+          "format": "uuid",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "extraction_method": {
+          "$ref": "#/$defs/ExtractionMethod"
+        },
+        "norm_end": {
+          "minimum": 0,
+          "title": "Norm End",
+          "type": "integer"
+        },
+        "norm_start": {
+          "minimum": 0,
+          "title": "Norm Start",
+          "type": "integer"
+        },
+        "normalization_profile_id": {
+          "minLength": 1,
+          "title": "Normalization Profile Id",
+          "type": "string"
+        },
+        "page_end": {
+          "minimum": 1,
+          "title": "Page End",
+          "type": "integer"
+        },
+        "page_start": {
+          "minimum": 1,
+          "title": "Page Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "document_id",
+        "page_start",
+        "page_end",
+        "norm_start",
+        "norm_end",
+        "extraction_method",
+        "normalization_profile_id"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "SpanValidation": {
+      "description": "The verdict of the mechanical check that a quoted span exists.\n\nAssigned only by the span validator. No model ever fills this in.",
+      "enum": [
+        "valid_exact",
+        "valid_normalized",
+        "valid_fuzzy_ocr",
+        "invalid_not_found",
+        "invalid_offset_mismatch",
+        "invalid_wrong_document",
+        "not_applicable"
+      ],
+      "title": "SpanValidation",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "claim": {
+      "maxLength": 400,
+      "minLength": 10,
+      "title": "Claim",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "criterion_id": {
+      "minLength": 1,
+      "title": "Criterion Id",
+      "type": "string"
+    },
+    "escalation_state": {
+      "$ref": "#/$defs/EscalationState"
+    },
+    "evidence_id": {
+      "format": "uuid",
+      "title": "Evidence Id",
+      "type": "string"
+    },
+    "model_tier": {
+      "$ref": "#/$defs/ModelTier"
+    },
+    "prompt_version": {
+      "minLength": 1,
+      "title": "Prompt Version",
+      "type": "string"
+    },
+    "provenance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Provenance"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "span_match_ratio": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Span Match Ratio"
+    },
+    "span_validation": {
+      "$ref": "#/$defs/SpanValidation"
+    },
+    "state": {
+      "$ref": "#/$defs/EvidenceState"
+    },
+    "validated_norm_start": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Validated Norm Start"
+    },
+    "verbatim_span": {
+      "anyOf": [
+        {
+          "maxLength": 600,
+          "minLength": 8,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Verbatim Span"
+    }
+  },
+  "required": [
+    "evidence_id",
+    "criterion_id",
+    "state",
+    "claim",
+    "confidence",
+    "model_tier",
+    "prompt_version",
+    "escalation_state",
+    "span_validation"
+  ],
+  "title": "EvidenceItem",
+  "type": "object"
+}

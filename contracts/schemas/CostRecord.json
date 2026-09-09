@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "ModelTier": {
+      "description": "Model identity by role, never by provider name.\n\nThe binding from tier to a provider model identifier lives in\n``config/models.yaml`` and nowhere else, so a model swap is a configuration\nchange and no report, chart, or log line has to be rewritten.",
+      "enum": [
+        "tier_cheap",
+        "tier_strong"
+      ],
+      "title": "ModelTier",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "cached_input_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Cached Input Tokens",
+      "type": "integer"
+    },
+    "call_site": {
+      "minLength": 1,
+      "title": "Call Site",
+      "type": "string"
+    },
+    "cost_usd": {
+      "anyOf": [
+        {
+          "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cost Usd"
+    },
+    "currency": {
+      "default": "USD",
+      "maxLength": 3,
+      "minLength": 3,
+      "title": "Currency",
+      "type": "string"
+    },
+    "input_tokens": {
+      "minimum": 0,
+      "title": "Input Tokens",
+      "type": "integer"
+    },
+    "latency_ms": {
+      "minimum": 0,
+      "title": "Latency Ms",
+      "type": "integer"
+    },
+    "model_tier": {
+      "$ref": "#/$defs/ModelTier"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "output_tokens": {
+      "minimum": 0,
+      "title": "Output Tokens",
+      "type": "integer"
+    },
+    "record_id": {
+      "format": "uuid",
+      "title": "Record Id",
+      "type": "string"
+    },
+    "run_id": {
+      "format": "uuid",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "unit_price_source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unit Price Source"
+    }
+  },
+  "required": [
+    "record_id",
+    "run_id",
+    "call_site",
+    "model_tier",
+    "input_tokens",
+    "output_tokens",
+    "latency_ms",
+    "occurred_at"
+  ],
+  "title": "CostRecord",
+  "type": "object"
+}

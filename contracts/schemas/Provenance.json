@@ -1,0 +1,62 @@
+{
+  "$defs": {
+    "ExtractionMethod": {
+      "enum": [
+        "digital_pdf",
+        "ocr",
+        "docx",
+        "plaintext"
+      ],
+      "title": "ExtractionMethod",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Where a quoted span sits in one document.\n\nCross-page spans are allowed, because a sentence can straddle a page break.\nCross-document spans are not: a single quotation drawn from two files is not\na quotation, and the span validator rejects one that resolves elsewhere.",
+  "properties": {
+    "document_id": {
+      "format": "uuid",
+      "title": "Document Id",
+      "type": "string"
+    },
+    "extraction_method": {
+      "$ref": "#/$defs/ExtractionMethod"
+    },
+    "norm_end": {
+      "minimum": 0,
+      "title": "Norm End",
+      "type": "integer"
+    },
+    "norm_start": {
+      "minimum": 0,
+      "title": "Norm Start",
+      "type": "integer"
+    },
+    "normalization_profile_id": {
+      "minLength": 1,
+      "title": "Normalization Profile Id",
+      "type": "string"
+    },
+    "page_end": {
+      "minimum": 1,
+      "title": "Page End",
+      "type": "integer"
+    },
+    "page_start": {
+      "minimum": 1,
+      "title": "Page Start",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "document_id",
+    "page_start",
+    "page_end",
+    "norm_start",
+    "norm_end",
+    "extraction_method",
+    "normalization_profile_id"
+  ],
+  "title": "Provenance",
+  "type": "object"
+}

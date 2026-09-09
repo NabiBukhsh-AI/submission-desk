@@ -1,0 +1,88 @@
+{
+  "$defs": {
+    "DocumentRole": {
+      "enum": [
+        "cv",
+        "cover_letter",
+        "portfolio",
+        "other"
+      ],
+      "title": "DocumentRole",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "blob_path": {
+      "minLength": 1,
+      "title": "Blob Path",
+      "type": "string"
+    },
+    "candidate_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "doc_role": {
+      "$ref": "#/$defs/DocumentRole"
+    },
+    "document_id": {
+      "format": "uuid",
+      "title": "Document Id",
+      "type": "string"
+    },
+    "document_sha256": {
+      "title": "Document Sha256",
+      "type": "string"
+    },
+    "mime_type": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Mime Type",
+      "type": "string"
+    },
+    "original_filename": {
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Original Filename",
+      "type": "string"
+    },
+    "page_count": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Page Count"
+    },
+    "received_at": {
+      "format": "date-time",
+      "title": "Received At",
+      "type": "string"
+    },
+    "size_bytes": {
+      "minimum": 1,
+      "title": "Size Bytes",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "document_id",
+    "candidate_id",
+    "original_filename",
+    "document_sha256",
+    "mime_type",
+    "size_bytes",
+    "blob_path",
+    "doc_role",
+    "received_at"
+  ],
+  "title": "CandidateDocument",
+  "type": "object"
+}

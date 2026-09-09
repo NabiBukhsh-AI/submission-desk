@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "RunStatus": {
+      "description": "Every state a run can occupy.\n\nThe transition graph and the illegal-transition list live in\n``domain/state_machine.py``; this enum is only the vocabulary.",
+      "enum": [
+        "created",
+        "intake_ok",
+        "extracted",
+        "sanitized",
+        "structured",
+        "calibrated",
+        "assessed",
+        "aggregated",
+        "composed",
+        "ready_for_review",
+        "needs_review",
+        "quarantined",
+        "manual_review_required",
+        "approved",
+        "rejected",
+        "needs_info",
+        "delivery_pending_retry",
+        "delivered",
+        "failed_terminal",
+        "interrupted"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "attempt": {
+      "minimum": 0,
+      "title": "Attempt",
+      "type": "integer"
+    },
+    "error_class": {
+      "minLength": 1,
+      "title": "Error Class",
+      "type": "string"
+    },
+    "error_code": {
+      "minLength": 1,
+      "title": "Error Code",
+      "type": "string"
+    },
+    "error_id": {
+      "format": "uuid",
+      "title": "Error Id",
+      "type": "string"
+    },
+    "message_redacted": {
+      "maxLength": 4000,
+      "title": "Message Redacted",
+      "type": "string"
+    },
+    "node": {
+      "minLength": 1,
+      "title": "Node",
+      "type": "string"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "resulting_state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "retryable": {
+      "title": "Retryable",
+      "type": "boolean"
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Id"
+    }
+  },
+  "required": [
+    "error_id",
+    "node",
+    "error_code",
+    "error_class",
+    "message_redacted",
+    "retryable",
+    "attempt",
+    "occurred_at"
+  ],
+  "title": "ErrorRecord",
+  "type": "object"
+}

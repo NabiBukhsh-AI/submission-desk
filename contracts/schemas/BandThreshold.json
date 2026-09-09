@@ -1,0 +1,35 @@
+{
+  "$defs": {
+    "Band": {
+      "description": "The recommendation. Computed by ``aggregate``, never emitted by a model.",
+      "enum": [
+        "advance",
+        "advance_with_reservations",
+        "hold",
+        "decline",
+        "insufficient_information",
+        "manual_review_required"
+      ],
+      "title": "Band",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "band": {
+      "$ref": "#/$defs/Band"
+    },
+    "min_score": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Min Score",
+      "type": "number"
+    }
+  },
+  "required": [
+    "band",
+    "min_score"
+  ],
+  "title": "BandThreshold",
+  "type": "object"
+}

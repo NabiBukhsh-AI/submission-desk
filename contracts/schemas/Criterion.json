@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "CriterionKind": {
+      "enum": [
+        "standard",
+        "high_stakes",
+        "blocker"
+      ],
+      "title": "CriterionKind",
+      "type": "string"
+    },
+    "CriterionState": {
+      "description": "What the rule engine concluded for a criterion, from its evidence.",
+      "enum": [
+        "met",
+        "partial",
+        "not_met",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "CriterionState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/CriterionKind"
+    },
+    "label": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Label",
+      "type": "string"
+    },
+    "min_supported": {
+      "default": 1,
+      "minimum": 0,
+      "title": "Min Supported",
+      "type": "integer"
+    },
+    "negative_examples": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Negative Examples",
+      "type": "array"
+    },
+    "positive_examples": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Positive Examples",
+      "type": "array"
+    },
+    "question": {
+      "maxLength": 1000,
+      "minLength": 10,
+      "title": "Question",
+      "type": "string"
+    },
+    "state_points": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "propertyNames": {
+        "$ref": "#/$defs/CriterionState"
+      },
+      "title": "State Points",
+      "type": "object"
+    },
+    "weight": {
+      "maximum": 10,
+      "minimum": 1,
+      "title": "Weight",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "label",
+    "question",
+    "kind",
+    "weight",
+    "state_points"
+  ],
+  "title": "Criterion",
+  "type": "object"
+}

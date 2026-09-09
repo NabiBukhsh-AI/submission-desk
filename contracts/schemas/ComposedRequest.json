@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "criterion_id": {
+      "minLength": 1,
+      "title": "Criterion Id",
+      "type": "string"
+    },
+    "request": {
+      "maxLength": 500,
+      "minLength": 10,
+      "title": "Request",
+      "type": "string"
+    }
+  },
+  "required": [
+    "criterion_id",
+    "request"
+  ],
+  "title": "ComposedRequest",
+  "type": "object"
+}

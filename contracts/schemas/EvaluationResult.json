@@ -1,0 +1,134 @@
+{
+  "$defs": {
+    "Band": {
+      "description": "The recommendation. Computed by ``aggregate``, never emitted by a model.",
+      "enum": [
+        "advance",
+        "advance_with_reservations",
+        "hold",
+        "decline",
+        "insufficient_information",
+        "manual_review_required"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "CriterionState": {
+      "description": "What the rule engine concluded for a criterion, from its evidence.",
+      "enum": [
+        "met",
+        "partial",
+        "not_met",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "CriterionState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "arm": {
+      "minLength": 1,
+      "title": "Arm",
+      "type": "string"
+    },
+    "band": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Band"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "case_id": {
+      "minLength": 1,
+      "title": "Case Id",
+      "type": "string"
+    },
+    "config_fingerprint": {
+      "minLength": 1,
+      "title": "Config Fingerprint",
+      "type": "string"
+    },
+    "cost_usd": {
+      "anyOf": [
+        {
+          "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cost Usd"
+    },
+    "criterion_states": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CriterionState"
+      },
+      "title": "Criterion States",
+      "type": "object"
+    },
+    "escalations": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Escalations",
+      "type": "integer"
+    },
+    "invalid_spans": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Invalid Spans",
+      "type": "integer"
+    },
+    "latency_ms": {
+      "minimum": 0,
+      "title": "Latency Ms",
+      "type": "integer"
+    },
+    "metrics": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Metrics",
+      "type": "object"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    },
+    "result_id": {
+      "format": "uuid",
+      "title": "Result Id",
+      "type": "string"
+    },
+    "run_at": {
+      "format": "date-time",
+      "title": "Run At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "result_id",
+    "run_at",
+    "case_id",
+    "arm",
+    "config_fingerprint",
+    "latency_ms"
+  ],
+  "title": "EvaluationResult",
+  "type": "object"
+}

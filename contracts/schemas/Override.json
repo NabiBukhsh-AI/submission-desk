@@ -1,0 +1,63 @@
+{
+  "$defs": {
+    "CriterionState": {
+      "description": "What the rule engine concluded for a criterion, from its evidence.",
+      "enum": [
+        "met",
+        "partial",
+        "not_met",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "CriterionState",
+      "type": "string"
+    },
+    "OverrideReason": {
+      "description": "Why a reviewer disagreed.\n\nThis taxonomy is what turns an override from a complaint into an\nimprovement loop: each value routes to a different remediation.\n``EVIDENCE_MISSED`` and ``SPAN_WRONG`` point at prompts. ``RUBRIC_WRONG``\nand ``THRESHOLD_WRONG`` point at the rubric. ``CONTEXT_MODEL_LACKS`` points\nat a genuine capability limit that belongs in LIMITATIONS.md.",
+      "enum": [
+        "evidence_misread",
+        "evidence_missed",
+        "span_wrong",
+        "criterion_ambiguous",
+        "rubric_wrong",
+        "context_model_lacks",
+        "threshold_wrong",
+        "other"
+      ],
+      "title": "OverrideReason",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "criterion_id": {
+      "minLength": 1,
+      "title": "Criterion Id",
+      "type": "string"
+    },
+    "new_state": {
+      "$ref": "#/$defs/CriterionState"
+    },
+    "previous_state": {
+      "$ref": "#/$defs/CriterionState"
+    },
+    "reason_code": {
+      "$ref": "#/$defs/OverrideReason"
+    },
+    "reason_text": {
+      "maxLength": 1000,
+      "minLength": 3,
+      "title": "Reason Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "criterion_id",
+    "previous_state",
+    "new_state",
+    "reason_code",
+    "reason_text"
+  ],
+  "title": "Override",
+  "type": "object"
+}

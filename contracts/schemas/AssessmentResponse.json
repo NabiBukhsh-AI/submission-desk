@@ -1,0 +1,142 @@
+{
+  "$defs": {
+    "EvidenceCandidate": {
+      "additionalProperties": false,
+      "description": "One piece of evidence as the model reports it.\n\nThe offsets are a claim, not a fact. Models count characters poorly, so the\nvalidator relocates the quotation in the source text and corrects them; what\nmatters is that the quoted string appears in the document at all.",
+      "properties": {
+        "claim": {
+          "maxLength": 400,
+          "minLength": 10,
+          "title": "Claim",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "document_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Document Id"
+        },
+        "norm_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Norm End"
+        },
+        "norm_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Norm Start"
+        },
+        "page_end": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page End"
+        },
+        "page_start": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page Start"
+        },
+        "state": {
+          "$ref": "#/$defs/EvidenceState"
+        },
+        "verbatim_span": {
+          "anyOf": [
+            {
+              "maxLength": 600,
+              "minLength": 8,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verbatim Span"
+        }
+      },
+      "required": [
+        "state",
+        "claim",
+        "confidence"
+      ],
+      "title": "EvidenceCandidate",
+      "type": "object"
+    },
+    "EvidenceState": {
+      "description": "What one piece of evidence says about a criterion.\n\nThere is no \"probably\" and no numeric grade. Absence of evidence is its own\nstate rather than a low score, because \"the document does not say\" and \"the\ndocument says no\" are different facts about a candidate.",
+      "enum": [
+        "supported",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "EvidenceState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The answer to one criterion, for one candidate.",
+  "properties": {
+    "criterion_id": {
+      "minLength": 1,
+      "title": "Criterion Id",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceCandidate"
+      },
+      "title": "Evidence",
+      "type": "array"
+    }
+  },
+  "required": [
+    "criterion_id"
+  ],
+  "title": "AssessmentResponse",
+  "type": "object"
+}

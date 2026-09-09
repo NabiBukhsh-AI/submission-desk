@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "criterion_id": {
+      "minLength": 1,
+      "title": "Criterion Id",
+      "type": "string"
+    },
+    "question": {
+      "maxLength": 500,
+      "minLength": 10,
+      "title": "Question",
+      "type": "string"
+    }
+  },
+  "required": [
+    "criterion_id",
+    "question"
+  ],
+  "title": "ComposedQuestion",
+  "type": "object"
+}

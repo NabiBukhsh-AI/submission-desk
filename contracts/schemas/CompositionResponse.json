@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "ComposedQuestion": {
+      "additionalProperties": false,
+      "properties": {
+        "criterion_id": {
+          "minLength": 1,
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 500,
+          "minLength": 10,
+          "title": "Question",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "question"
+      ],
+      "title": "ComposedQuestion",
+      "type": "object"
+    },
+    "ComposedRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "criterion_id": {
+          "minLength": 1,
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "request": {
+          "maxLength": 500,
+          "minLength": 10,
+          "title": "Request",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "request"
+      ],
+      "title": "ComposedRequest",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Gaps, phrased as something a recruiter can send.\n\nWhich gaps exist is decided deterministically from the criterion states\nbefore this call is made. The model is asked only to write the sentences, so\nit cannot invent a gap that the assessment did not find.",
+  "properties": {
+    "information_requests": {
+      "items": {
+        "$ref": "#/$defs/ComposedRequest"
+      },
+      "title": "Information Requests",
+      "type": "array"
+    },
+    "interview_questions": {
+      "items": {
+        "$ref": "#/$defs/ComposedQuestion"
+      },
+      "title": "Interview Questions",
+      "type": "array"
+    }
+  },
+  "title": "CompositionResponse",
+  "type": "object"
+}

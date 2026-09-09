@@ -1,0 +1,80 @@
+{
+  "$defs": {
+    "Band": {
+      "description": "The recommendation. Computed by ``aggregate``, never emitted by a model.",
+      "enum": [
+        "advance",
+        "advance_with_reservations",
+        "hold",
+        "decline",
+        "insufficient_information",
+        "manual_review_required"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "CriterionState": {
+      "description": "What the rule engine concluded for a criterion, from its evidence.",
+      "enum": [
+        "met",
+        "partial",
+        "not_met",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "CriterionState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What a human decided, recorded before the system was run.\n\n``must_be_insufficient`` is the half of the label most systems omit: it\nrecords the criteria where the recruiter could not tell from the document,\nso that a system inventing an answer there is marked wrong rather than\nlucky.",
+  "properties": {
+    "criterion_states": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CriterionState"
+      },
+      "title": "Criterion States",
+      "type": "object"
+    },
+    "expected_band": {
+      "$ref": "#/$defs/Band"
+    },
+    "forbidden_claims": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Forbidden Claims",
+      "type": "array"
+    },
+    "must_be_insufficient": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Must Be Insufficient",
+      "type": "array"
+    },
+    "must_flag_integrity": {
+      "default": false,
+      "title": "Must Flag Integrity",
+      "type": "boolean"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "criterion_states",
+    "expected_band"
+  ],
+  "title": "GoldLabel",
+  "type": "object"
+}

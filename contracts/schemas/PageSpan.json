@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "ExtractionMethod": {
+      "enum": [
+        "digital_pdf",
+        "ocr",
+        "docx",
+        "plaintext"
+      ],
+      "title": "ExtractionMethod",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Where one page begins and ends in normalised coordinates.",
+  "properties": {
+    "extraction_method": {
+      "$ref": "#/$defs/ExtractionMethod"
+    },
+    "norm_end": {
+      "minimum": 0,
+      "title": "Norm End",
+      "type": "integer"
+    },
+    "norm_start": {
+      "minimum": 0,
+      "title": "Norm Start",
+      "type": "integer"
+    },
+    "ocr_confidence": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ocr Confidence"
+    },
+    "page_number": {
+      "minimum": 1,
+      "title": "Page Number",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "page_number",
+    "norm_start",
+    "norm_end",
+    "extraction_method"
+  ],
+  "title": "PageSpan",
+  "type": "object"
+}

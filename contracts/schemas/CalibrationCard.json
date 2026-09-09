@@ -1,0 +1,119 @@
+{
+  "$defs": {
+    "Band": {
+      "description": "The recommendation. Computed by ``aggregate``, never emitted by a model.",
+      "enum": [
+        "advance",
+        "advance_with_reservations",
+        "hold",
+        "decline",
+        "insufficient_information",
+        "manual_review_required"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "CriterionState": {
+      "description": "What the rule engine concluded for a criterion, from its evidence.",
+      "enum": [
+        "met",
+        "partial",
+        "not_met",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "CriterionState",
+      "type": "string"
+    },
+    "OverrideReason": {
+      "description": "Why a reviewer disagreed.\n\nThis taxonomy is what turns an override from a complaint into an\nimprovement loop: each value routes to a different remediation.\n``EVIDENCE_MISSED`` and ``SPAN_WRONG`` point at prompts. ``RUBRIC_WRONG``\nand ``THRESHOLD_WRONG`` point at the rubric. ``CONTEXT_MODEL_LACKS`` points\nat a genuine capability limit that belongs in LIMITATIONS.md.",
+      "enum": [
+        "evidence_misread",
+        "evidence_missed",
+        "span_wrong",
+        "criterion_ambiguous",
+        "rubric_wrong",
+        "context_model_lacks",
+        "threshold_wrong",
+        "other"
+      ],
+      "title": "OverrideReason",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "anonymized_summary": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Anonymized Summary",
+      "type": "string"
+    },
+    "card_id": {
+      "format": "uuid",
+      "title": "Card Id",
+      "type": "string"
+    },
+    "criterion_states": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CriterionState"
+      },
+      "title": "Criterion States",
+      "type": "object"
+    },
+    "decided_at": {
+      "format": "date-time",
+      "title": "Decided At",
+      "type": "string"
+    },
+    "embedding": {
+      "format": "binary",
+      "title": "Embedding",
+      "type": "string"
+    },
+    "final_band": {
+      "$ref": "#/$defs/Band"
+    },
+    "reviewer_reason_codes": {
+      "items": {
+        "$ref": "#/$defs/OverrideReason"
+      },
+      "title": "Reviewer Reason Codes",
+      "type": "array"
+    },
+    "reviewer_reason_text_redacted": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reviewer Reason Text Redacted"
+    },
+    "role_id": {
+      "minLength": 1,
+      "title": "Role Id",
+      "type": "string"
+    },
+    "rubric_version": {
+      "minLength": 1,
+      "title": "Rubric Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "card_id",
+    "role_id",
+    "rubric_version",
+    "anonymized_summary",
+    "criterion_states",
+    "final_band",
+    "decided_at",
+    "embedding"
+  ],
+  "title": "CalibrationCard",
+  "type": "object"
+}

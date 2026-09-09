@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "ModelTier": {
+      "description": "Model identity by role, never by provider name.\n\nThe binding from tier to a provider model identifier lives in\n``config/models.yaml`` and nowhere else, so a model swap is a configuration\nchange and no report, chart, or log line has to be rewritten.",
+      "enum": [
+        "tier_cheap",
+        "tier_strong"
+      ],
+      "title": "ModelTier",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "attempt_index": {
+      "minimum": 0,
+      "title": "Attempt Index",
+      "type": "integer"
+    },
+    "budget_remaining_usd": {
+      "anyOf": [
+        {
+          "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Budget Remaining Usd"
+    },
+    "call_site": {
+      "minLength": 1,
+      "title": "Call Site",
+      "type": "string"
+    },
+    "criterion_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Criterion Id"
+    },
+    "decided_at": {
+      "format": "date-time",
+      "title": "Decided At",
+      "type": "string"
+    },
+    "policy_id": {
+      "minLength": 1,
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "requested_tier": {
+      "$ref": "#/$defs/ModelTier"
+    },
+    "selected_tier": {
+      "$ref": "#/$defs/ModelTier"
+    },
+    "trigger": {
+      "minLength": 1,
+      "title": "Trigger",
+      "type": "string"
+    }
+  },
+  "required": [
+    "call_site",
+    "attempt_index",
+    "requested_tier",
+    "selected_tier",
+    "policy_id",
+    "trigger",
+    "decided_at"
+  ],
+  "title": "ModelRoutingDecision",
+  "type": "object"
+}

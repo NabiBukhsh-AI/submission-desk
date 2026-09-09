@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "Band": {
+      "description": "The recommendation. Computed by ``aggregate``, never emitted by a model.",
+      "enum": [
+        "advance",
+        "advance_with_reservations",
+        "hold",
+        "decline",
+        "insufficient_information",
+        "manual_review_required"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "CriterionState": {
+      "description": "What the rule engine concluded for a criterion, from its evidence.",
+      "enum": [
+        "met",
+        "partial",
+        "not_met",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "CriterionState",
+      "type": "string"
+    },
+    "Override": {
+      "additionalProperties": false,
+      "properties": {
+        "criterion_id": {
+          "minLength": 1,
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "new_state": {
+          "$ref": "#/$defs/CriterionState"
+        },
+        "previous_state": {
+          "$ref": "#/$defs/CriterionState"
+        },
+        "reason_code": {
+          "$ref": "#/$defs/OverrideReason"
+        },
+        "reason_text": {
+          "maxLength": 1000,
+          "minLength": 3,
+          "title": "Reason Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "previous_state",
+        "new_state",
+        "reason_code",
+        "reason_text"
+      ],
+      "title": "Override",
+      "type": "object"
+    },
+    "OverrideReason": {
+      "description": "Why a reviewer disagreed.\n\nThis taxonomy is what turns an override from a complaint into an\nimprovement loop: each value routes to a different remediation.\n``EVIDENCE_MISSED`` and ``SPAN_WRONG`` point at prompts. ``RUBRIC_WRONG``\nand ``THRESHOLD_WRONG`` point at the rubric. ``CONTEXT_MODEL_LACKS`` points\nat a genuine capability limit that belongs in LIMITATIONS.md.",
+      "enum": [
+        "evidence_misread",
+        "evidence_missed",
+        "span_wrong",
+        "criterion_ambiguous",
+        "rubric_wrong",
+        "context_model_lacks",
+        "threshold_wrong",
+        "other"
+      ],
+      "title": "OverrideReason",
+      "type": "string"
+    },
+    "ReviewAction": {
+      "enum": [
+        "approve",
+        "reject",
+        "request_info"
+      ],
+      "title": "ReviewAction",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "$ref": "#/$defs/ReviewAction"
+    },
+    "comments": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Comments"
+    },
+    "decided_at": {
+      "format": "date-time",
+      "title": "Decided At",
+      "type": "string"
+    },
+    "decision_id": {
+      "format": "uuid",
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "elapsed_seconds": {
+      "minimum": 0,
+      "title": "Elapsed Seconds",
+      "type": "integer"
+    },
+    "overrides": {
+      "items": {
+        "$ref": "#/$defs/Override"
+      },
+      "title": "Overrides",
+      "type": "array"
+    },
+    "post_override_band": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Band"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reviewer_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Reviewer Id",
+      "type": "string"
+    },
+    "run_id": {
+      "format": "uuid",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "run_version": {
+      "minimum": 0,
+      "title": "Run Version",
+      "type": "integer"
+    },
+    "trust_rating": {
+      "anyOf": [
+        {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trust Rating"
+    }
+  },
+  "required": [
+    "decision_id",
+    "run_id",
+    "reviewer_id",
+    "action",
+    "elapsed_seconds",
+    "decided_at",
+    "run_version"
+  ],
+  "title": "ReviewDecision",
+  "type": "object"
+}

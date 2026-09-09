@@ -1,0 +1,295 @@
+{
+  "$defs": {
+    "Band": {
+      "description": "The recommendation. Computed by ``aggregate``, never emitted by a model.",
+      "enum": [
+        "advance",
+        "advance_with_reservations",
+        "hold",
+        "decline",
+        "insufficient_information",
+        "manual_review_required"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "IntegrityTier": {
+      "enum": [
+        "clean",
+        "suspect",
+        "quarantine"
+      ],
+      "title": "IntegrityTier",
+      "type": "string"
+    },
+    "ReviewAction": {
+      "enum": [
+        "approve",
+        "reject",
+        "request_info"
+      ],
+      "title": "ReviewAction",
+      "type": "string"
+    },
+    "RunStatus": {
+      "description": "Every state a run can occupy.\n\nThe transition graph and the illegal-transition list live in\n``domain/state_machine.py``; this enum is only the vocabulary.",
+      "enum": [
+        "created",
+        "intake_ok",
+        "extracted",
+        "sanitized",
+        "structured",
+        "calibrated",
+        "assessed",
+        "aggregated",
+        "composed",
+        "ready_for_review",
+        "needs_review",
+        "quarantined",
+        "manual_review_required",
+        "approved",
+        "rejected",
+        "needs_info",
+        "delivery_pending_retry",
+        "delivered",
+        "failed_terminal",
+        "interrupted"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "blind_mode": {
+      "title": "Blind Mode",
+      "type": "boolean"
+    },
+    "cached_input_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Cached Input Tokens",
+      "type": "integer"
+    },
+    "calibration_enabled": {
+      "title": "Calibration Enabled",
+      "type": "boolean"
+    },
+    "calibration_status": {
+      "minLength": 1,
+      "title": "Calibration Status",
+      "type": "string"
+    },
+    "candidate_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "completed_nodes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Completed Nodes",
+      "type": "array"
+    },
+    "content_key": {
+      "minLength": 1,
+      "title": "Content Key",
+      "type": "string"
+    },
+    "error_codes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Error Codes",
+      "type": "array"
+    },
+    "escalation_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Escalation Count",
+      "type": "integer"
+    },
+    "final_band": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Band"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "finished_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Finished At"
+    },
+    "integrity_tier": {
+      "$ref": "#/$defs/IntegrityTier",
+      "default": "clean"
+    },
+    "invalid_span_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Invalid Span Count",
+      "type": "integer"
+    },
+    "llm_call_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Llm Call Count",
+      "type": "integer"
+    },
+    "model_tier_bindings_hash": {
+      "minLength": 1,
+      "title": "Model Tier Bindings Hash",
+      "type": "string"
+    },
+    "override_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Override Count",
+      "type": "integer"
+    },
+    "pipeline_version": {
+      "minLength": 1,
+      "title": "Pipeline Version",
+      "type": "string"
+    },
+    "prompt_bundle_hash": {
+      "minLength": 1,
+      "title": "Prompt Bundle Hash",
+      "type": "string"
+    },
+    "prompt_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Prompt Versions",
+      "type": "object"
+    },
+    "repair_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Repair Count",
+      "type": "integer"
+    },
+    "retry_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Retry Count",
+      "type": "integer"
+    },
+    "reviewer_action": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReviewAction"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "role_id": {
+      "minLength": 1,
+      "title": "Role Id",
+      "type": "string"
+    },
+    "routing_policy_id": {
+      "minLength": 1,
+      "title": "Routing Policy Id",
+      "type": "string"
+    },
+    "rubric_hash": {
+      "minLength": 1,
+      "title": "Rubric Hash",
+      "type": "string"
+    },
+    "rubric_version": {
+      "minLength": 1,
+      "title": "Rubric Version",
+      "type": "string"
+    },
+    "run_id": {
+      "format": "uuid",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RunStatus"
+    },
+    "total_cost_usd": {
+      "anyOf": [
+        {
+          "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Total Cost Usd"
+    },
+    "total_input_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Total Input Tokens",
+      "type": "integer"
+    },
+    "total_output_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Total Output Tokens",
+      "type": "integer"
+    },
+    "validation_failure_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Validation Failure Count",
+      "type": "integer"
+    },
+    "version": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "run_id",
+    "content_key",
+    "candidate_id",
+    "role_id",
+    "rubric_version",
+    "rubric_hash",
+    "prompt_bundle_hash",
+    "model_tier_bindings_hash",
+    "routing_policy_id",
+    "blind_mode",
+    "calibration_enabled",
+    "calibration_status",
+    "pipeline_version",
+    "status",
+    "started_at"
+  ],
+  "title": "RunRecord",
+  "type": "object"
+}

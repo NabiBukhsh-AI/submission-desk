@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "description": "One contiguous stretch where normalised and raw text stay in step.",
+  "properties": {
+    "length": {
+      "exclusiveMinimum": 0,
+      "title": "Length",
+      "type": "integer"
+    },
+    "norm_start": {
+      "minimum": 0,
+      "title": "Norm Start",
+      "type": "integer"
+    },
+    "raw_start": {
+      "minimum": 0,
+      "title": "Raw Start",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "norm_start",
+    "raw_start",
+    "length"
+  ],
+  "title": "OffsetRun",
+  "type": "object"
+}

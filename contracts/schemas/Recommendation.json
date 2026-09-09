@@ -1,0 +1,142 @@
+{
+  "$defs": {
+    "Band": {
+      "description": "The recommendation. Computed by ``aggregate``, never emitted by a model.",
+      "enum": [
+        "advance",
+        "advance_with_reservations",
+        "hold",
+        "decline",
+        "insufficient_information",
+        "manual_review_required"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "CriterionState": {
+      "description": "What the rule engine concluded for a criterion, from its evidence.",
+      "enum": [
+        "met",
+        "partial",
+        "not_met",
+        "contradicted",
+        "insufficient_evidence"
+      ],
+      "title": "CriterionState",
+      "type": "string"
+    },
+    "DerivationStep": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "inputs": {
+          "additionalProperties": true,
+          "title": "Inputs",
+          "type": "object"
+        },
+        "output": {
+          "minLength": 1,
+          "title": "Output",
+          "type": "string"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "description",
+        "output"
+      ],
+      "title": "DerivationStep",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "band": {
+      "$ref": "#/$defs/Band"
+    },
+    "blockers_fired": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Blockers Fired",
+      "type": "array"
+    },
+    "coverage": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Coverage",
+      "type": "number"
+    },
+    "criterion_states": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CriterionState"
+      },
+      "title": "Criterion States",
+      "type": "object"
+    },
+    "derivation": {
+      "items": {
+        "$ref": "#/$defs/DerivationStep"
+      },
+      "minItems": 1,
+      "title": "Derivation",
+      "type": "array"
+    },
+    "requires_human": {
+      "default": false,
+      "title": "Requires Human",
+      "type": "boolean"
+    },
+    "requires_human_reasons": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Requires Human Reasons",
+      "type": "array"
+    },
+    "rubric_version": {
+      "minLength": 1,
+      "title": "Rubric Version",
+      "type": "string"
+    },
+    "run_id": {
+      "format": "uuid",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "score": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Score"
+    }
+  },
+  "required": [
+    "run_id",
+    "band",
+    "coverage",
+    "criterion_states",
+    "derivation",
+    "rubric_version"
+  ],
+  "title": "Recommendation",
+  "type": "object"
+}

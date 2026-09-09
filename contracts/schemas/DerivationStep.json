@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "description": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "inputs": {
+      "additionalProperties": true,
+      "title": "Inputs",
+      "type": "object"
+    },
+    "output": {
+      "minLength": 1,
+      "title": "Output",
+      "type": "string"
+    },
+    "rule_id": {
+      "minLength": 1,
+      "title": "Rule Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "rule_id",
+    "description",
+    "output"
+  ],
+  "title": "DerivationStep",
+  "type": "object"
+}

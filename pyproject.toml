@@ -54,6 +54,13 @@ select = [
     "RUF",
 ]
 
+ignore = [
+    # UP042 prefers StrEnum. The engineering standards mandate (str, Enum), and
+    # the two differ in what str() returns, which changes what lands in logs and
+    # in SQLite. The standard wins over the linter's default.
+    "UP042",
+]
+
 [tool.ruff.lint.per-file-ignores]
 # Tests may use assert-heavy, longer-bodied functions.
 "tests/**" = ["PLR2004"]

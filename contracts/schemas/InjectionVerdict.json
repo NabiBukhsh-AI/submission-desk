@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "Severity": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A second opinion on one suspicious excerpt.\n\nConsulted only where the deterministic detectors are ambiguous, and its\nanswer may only raise a severity, never lower one. A model persuaded by the\ntext it is examining can therefore make the system more cautious and never\nless.",
+  "properties": {
+    "is_instruction": {
+      "title": "Is Instruction",
+      "type": "boolean"
+    },
+    "rationale": {
+      "maxLength": 500,
+      "minLength": 3,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "severity": {
+      "$ref": "#/$defs/Severity"
+    }
+  },
+  "required": [
+    "is_instruction",
+    "severity",
+    "rationale"
+  ],
+  "title": "InjectionVerdict",
+  "type": "object"
+}
