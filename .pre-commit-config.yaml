@@ -1,0 +1,50 @@
+# Hooks that can run today are enabled. The rest are listed, commented, with
+# the phase that turns them on, so the intended final shape is visible rather
+# than remembered. A configuration that fails on run is worse than one that
+# grows, so nothing here points at a script that does not exist yet.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+      - id: detect-private-key
+
+  # Enabled in Phase 2, once the contracts and the export script exist.
+  # - repo: local
+  #   hooks:
+  #     - id: mypy
+  #       name: mypy
+  #       entry: .venv/bin/mypy
+  #       language: system
+  #       pass_filenames: false
+  #     - id: schemas-current
+  #       name: committed JSON Schema matches the models
+  #       entry: .venv/bin/python scripts/export_schemas.py --check
+  #       language: system
+  #       pass_filenames: false
+
+  # Enabled in Phase 21, once the scanners exist.
+  # - repo: local
+  #   hooks:
+  #     - id: check-pii
+  #       name: no candidate PII in the commit
+  #       entry: .venv/bin/python scripts/check_pii.py
+  #       language: system
+  #     - id: check-secrets
+  #       name: no key-shaped strings and no .env
+  #       entry: .venv/bin/python scripts/check_secrets.py
+  #       language: system

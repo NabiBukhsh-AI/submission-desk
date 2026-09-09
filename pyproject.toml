@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "submission-desk"
+version = "0.1.0"
+description = "Evidence-first candidate screening and submission-package system"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# Runtime dependencies are deliberately minimal at this phase. Every addition
+# needs a justification in the change description and must not duplicate
+# something the standard library does adequately.
+dependencies = [
+    "pydantic>=2.7,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8.2",
+]
+
+[tool.setuptools.packages.find]
+include = [
+    "domain*",
+    "application*",
+    "pipeline*",
+    "infrastructure*",
+    "app*",
+    "eval*",
+]
+
+# ---------------------------------------------------------------------------
+# Lint and format
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "SIM",  # simplify
+    "PL",   # pylint subset
+    "RUF",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may use assert-heavy, longer-bodied functions.
+"tests/**" = ["PLR2004"]
+
+# ---------------------------------------------------------------------------
+# Types
+# ---------------------------------------------------------------------------
+
+[tool.mypy]
+python_version = "3.11"
+files = ["domain", "application", "pipeline", "infrastructure", "app", "eval", "tests"]
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Strict mode applies to the two layers that hold the business rules. The rest
+# of the tree is checked in standard mode, because adapter code deals with
+# untyped third-party surfaces where strictness buys assertions rather than
+# safety.
+[[tool.mypy.overrides]]
+module = ["domain.*", "application.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_any_generics = true
+no_implicit_reexport = true
+strict_equality = true
+warn_return_any = true
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The repository root on sys.path, so the layer packages import without an
+# editable install being a precondition for running the suite.
+pythonpath = ["."]
+addopts = "--strict-markers"
+markers = [
+    "live: touches a real external service; excluded from the offline suite",
+    "slow: takes more than a second; excluded from the default check",
+]
