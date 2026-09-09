@@ -16,6 +16,7 @@ from pathlib import Path
 
 from application.budget import BudgetGuard
 from application.deps import Deps, Settings, SystemClock
+from infrastructure.storage.blobs import BlobStore
 from infrastructure.storage.sqlite.repositories import (
     SqliteCalibrationRepository,
     SqliteCandidateRepository,
@@ -94,6 +95,7 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         calibration=SqliteCalibrationRepository(db_path),
         llm_cache=SqliteLlmCacheRepository(db_path),
         events=SqliteEventRepository(db_path),
+        blobs=BlobStore(settings.blob_dir),
         budget=BudgetGuard(
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,

@@ -88,7 +88,9 @@ class RunRepository(Protocol):
 
 
 class CandidateRepository(Protocol):
-    def add_document(self, document: CandidateDocument) -> None: ...
+    def add_document(self, document: CandidateDocument, *, run_id: UUID | None = None) -> None:
+        """Record a document, optionally attached to the run that accepted it."""
+        ...
 
     def documents_for_run(self, run_id: UUID) -> list[CandidateDocument]: ...
 
@@ -214,4 +216,25 @@ class EventRepository(Protocol):
 
     def for_run(self, run_id: UUID) -> list[tuple[int, str, str, str]]:
         """Returns (seq, node, node_status, occurred_at) in order."""
+        ...
+
+
+class BlobStore(Protocol):
+    """Where document bytes live, addressed by content hash.
+
+    A port rather than a direct import, because a node performs I/O only through
+    Deps. That is what keeps the pipeline runnable against fakes, and it is the
+    rule the architecture test enforces.
+    """
+
+    def put(self, data: bytes) -> str:
+        """Store bytes and return their hash. Writing an existing hash is a no-op."""
+        ...
+
+    def get(self, document_sha256: str) -> bytes: ...
+
+    def exists(self, document_sha256: str) -> bool: ...
+
+    def path_for(self, document_sha256: str) -> object:
+        """The address of a hash. Never derived from a filename."""
         ...

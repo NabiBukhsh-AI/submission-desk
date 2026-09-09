@@ -1,0 +1,45 @@
+# Hard limits, applied before anything expensive happens.
+#
+# These exist to keep cost at zero for input that can never produce a valid
+# assessment. A 40 MB scan and a renamed executable both stop here, having spent
+# nothing.
+#
+# Every number is editable. Raising one is a decision about what the system will
+# accept, not a code change.
+
+intake:
+  # Bytes. A CV above this is a scan of a book or a mistake.
+  max_document_bytes: 26214400        # 25 MB
+  # Pages. Academic CVs run long; sixty is generous and still bounded.
+  max_pages: 60
+  # Documents per candidate. More than this is a folder that got mixed up.
+  max_documents_per_candidate: 8
+  # Characters of readable text below which a document says nothing.
+  min_document_chars: 200
+  # What magic bytes are accepted. The extension is never trusted.
+  accepted_types: [pdf, docx, txt, md]
+
+extraction:
+  # Characters per page below which the digital text layer is not believable and
+  # OCR takes over for that page alone.
+  ocr_trigger_chars_per_page: 100
+  ocr_max_pages: 20
+  ocr_min_confidence: 0.6
+  # Below this the reviewer is warned that quotations need checking by eye.
+  extraction_confidence_warn: 0.6
+
+language:
+  # Processed normally.
+  allowed: [en]
+  # Processed, flagged, and reported as unmeasured quality.
+  supported: [en, ko]
+  # No single language above this share means the document is mixed.
+  dominance_threshold: 0.6
+
+archive:
+  # A DOCX is a zip. These caps stop a zip bomb and an entity expansion from
+  # becoming a memory exhaustion before any parsing begins.
+  max_entries: 400
+  max_uncompressed_bytes: 104857600   # 100 MB
+  max_compression_ratio: 200
+  max_xml_entities: 1000

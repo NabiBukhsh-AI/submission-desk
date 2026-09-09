@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from application.deps import Deps
 from domain.contracts.enums import RunStatus
 from domain.contracts.run_state import NodeResult, NodeStatus, RunState
+from pipeline import intake
 
 NodeFn = Callable[[RunState, Deps], NodeResult]
 
@@ -72,7 +73,7 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="INTAKE",
-        fn=_placeholder("INTAKE"),
+        fn=intake.node,
         success_status=RunStatus.INTAKE_OK,
         failure_status=RunStatus.FAILED_TERMINAL,
         failure_message="These files could not be accepted.",

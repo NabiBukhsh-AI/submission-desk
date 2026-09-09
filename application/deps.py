@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from domain.ports.repositories import (
+    BlobStore,
     CalibrationRepository,
     CandidateRepository,
     CostRepository,
@@ -92,6 +93,7 @@ class Deps:
     calibration: CalibrationRepository
     llm_cache: LlmCacheRepository
     events: EventRepository
+    blobs: BlobStore
 
     #: Filled in by later phases. Declared here so the shape of the finished
     #: system is visible from the start rather than assembled by accretion.
