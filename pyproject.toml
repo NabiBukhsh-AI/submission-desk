@@ -70,7 +70,13 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Tests may use assert-heavy, longer-bodied functions.
-"tests/**" = ["PLR2004"]
+"tests/**" = ["PLR2004", "PLC0415"]
+# content_key and the event append take many arguments on purpose: every one is
+# keyword-only, and collapsing them into a dict would remove the type checking
+# that stops two similar strings being transposed.
+"domain/identity.py" = ["PLR0913"]
+"domain/ports/repositories.py" = ["PLR0913"]
+"infrastructure/storage/sqlite/repositories.py" = ["PLR0913"]
 
 # ---------------------------------------------------------------------------
 # Types
