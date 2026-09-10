@@ -104,7 +104,7 @@ def test_a_high_finding_quarantines() -> None:
 
 def test_a_tier_below_its_findings_is_rejected() -> None:
     """Downgrading a tier is how a detected injection becomes an unread footnote."""
-    with pytest.raises(ValidationError, match="implies quarantine"):
+    with pytest.raises(ValidationError, match="imply quarantine"):
         IntegrityReport(
             document_id=uuid4(), tier=IntegrityTier.SUSPECT, findings=[finding(Severity.HIGH)]
         )
@@ -112,7 +112,7 @@ def test_a_tier_below_its_findings_is_rejected() -> None:
 
 def test_a_tier_above_its_findings_is_rejected() -> None:
     """A detector that fires on everything is worse than no detector."""
-    with pytest.raises(ValidationError, match="implies clean"):
+    with pytest.raises(ValidationError, match="imply clean"):
         IntegrityReport(document_id=uuid4(), tier=IntegrityTier.QUARANTINE, findings=[])
 
 

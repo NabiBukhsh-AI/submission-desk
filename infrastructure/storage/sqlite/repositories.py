@@ -35,6 +35,9 @@ from domain.contracts import (
     EscalationState,
     EvidenceItem,
     EvidenceState,
+    IntegrityFinding,
+    IntegrityFindingKind,
+    IntegrityReport,
     IntegrityTier,
     ModelTier,
     Override,
@@ -45,6 +48,7 @@ from domain.contracts import (
     ReviewDecision,
     RunRecord,
     RunStatus,
+    Severity,
     SourceText,
     SpanValidation,
 )
@@ -414,6 +418,134 @@ class SqliteCandidateRepository(SqliteRepository):
                     _now(),
                 ),
             )
+
+    # --- integrity ---------------------------------------------------------
+
+    def save_integrity_report(self, report: IntegrityReport, *, run_id: UUID | None = None) -> None:
+        """Store a scan, superseding any earlier one for the same document.
+
+        The earlier row is marked rather than deleted. When a detector changes,
+        the question "what did the scanner think in March" still has an answer,
+        which is the difference between a security log and a status field.
+        """
+        now = _now()
+        report_id = uuid4()
+
+        with write_transaction(self.connection) as write:
+            write.execute(
+                """
+                UPDATE integrity_reports SET superseded_at = ?
+                WHERE document_id = ? AND superseded_at IS NULL
+                """,
+                (now, str(report.document_id)),
+            )
+            write.execute(
+                """
+                INSERT INTO integrity_reports (
+                    report_id, document_id, run_id, tier, classifier_used,
+                    classifier_unavailable, sanitized_char_count, threshold, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(report_id),
+                    str(report.document_id),
+                    str(run_id) if run_id else None,
+                    report.tier.value,
+                    int(report.classifier_used),
+                    int(report.classifier_unavailable),
+                    report.sanitized_char_count,
+                    report.threshold,
+                    now,
+                ),
+            )
+            for finding in report.findings:
+                write.execute(
+                    """
+                    INSERT INTO integrity_findings (
+                        finding_id, report_id, document_id, kind, severity, detector,
+                        detector_confidence, excerpt, provenance, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(uuid4()),
+                        str(report_id),
+                        str(report.document_id),
+                        finding.kind.value,
+                        finding.severity.value,
+                        finding.detector,
+                        finding.detector_confidence,
+                        finding.excerpt,
+                        _dumps(finding.provenance.model_dump(mode="json"))
+                        if finding.provenance
+                        else None,
+                        now,
+                    ),
+                )
+
+    def integrity_report_for(self, document_id: UUID) -> IntegrityReport | None:
+        """The current scan for one document."""
+        row = self.connection.execute(
+            """
+            SELECT * FROM integrity_reports
+            WHERE document_id = ? AND superseded_at IS NULL
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (str(document_id),),
+        ).fetchone()
+        return None if row is None else self._report_from(row)
+
+    def integrity_reports_for_run(self, run_id: UUID) -> list[IntegrityReport]:
+        rows = self.connection.execute(
+            """
+            SELECT * FROM integrity_reports
+            WHERE run_id = ? AND superseded_at IS NULL
+            ORDER BY created_at
+            """,
+            (str(run_id),),
+        ).fetchall()
+        return [self._report_from(row) for row in rows]
+
+    def _report_from(self, row: sqlite3.Row) -> IntegrityReport:
+        findings = self.connection.execute(
+            "SELECT * FROM integrity_findings WHERE report_id = ? ORDER BY created_at",
+            (row["report_id"],),
+        ).fetchall()
+
+        return IntegrityReport(
+            document_id=UUID(row["document_id"]),
+            tier=IntegrityTier(row["tier"]),
+            findings=[
+                IntegrityFinding(
+                    kind=IntegrityFindingKind(finding["kind"]),
+                    severity=Severity(finding["severity"]),
+                    detector=finding["detector"],
+                    detector_confidence=finding["detector_confidence"],
+                    excerpt=finding["excerpt"],
+                    provenance=_loads(finding["provenance"], None),
+                )
+                for finding in findings
+            ],
+            classifier_used=bool(row["classifier_used"]),
+            classifier_unavailable=bool(row["classifier_unavailable"]),
+            sanitized_char_count=row["sanitized_char_count"],
+            threshold=row["threshold"],
+        )
+
+    def detector_counts(self) -> list[tuple[str, str, int]]:
+        """How often each detector fired, and at what severity.
+
+        The question the stable detector id exists to answer. Used by the
+        adversarial corpus report and by the operations page.
+        """
+        rows = self.connection.execute(
+            """
+            SELECT detector, severity, COUNT(*) AS n
+            FROM integrity_findings
+            GROUP BY detector, severity
+            ORDER BY detector, severity
+            """
+        ).fetchall()
+        return [(row["detector"], row["severity"], row["n"]) for row in rows]
 
 
 # ---------------------------------------------------------------------------

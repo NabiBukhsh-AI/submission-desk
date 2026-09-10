@@ -21,6 +21,7 @@ from infrastructure.extraction.ocr import TesseractEngine
 from infrastructure.models.routing.policies import policy_for
 from infrastructure.prompts.registry import PromptRegistry
 from infrastructure.rubrics import RubricLoader
+from infrastructure.security.scan import Scanner
 from infrastructure.storage.blobs import BlobStore
 from infrastructure.storage.sqlite.repositories import (
     SqliteCalibrationRepository,
@@ -88,6 +89,10 @@ def settings_from_env(**overrides: object) -> Settings:
         structure_max_input_tokens=number("STRUCTURE_MAX_INPUT_TOKENS", 24_000),
         reviewer_id=os.environ.get("REVIEWER_ID") or "",
         log_spans=flag("LOG_SPANS", False),
+        sanitize_render_diff=flag("SANITIZE_RENDER_DIFF", True),
+        render_diff_max_pages=number("RENDER_DIFF_MAX_PAGES", 10),
+        suspect_confidence=_fraction("SUSPECT_CONFIDENCE", 0.75),
+        sanitize_classify=flag("SANITIZE_CLASSIFY", False),
     )
 
     if overrides:
@@ -109,6 +114,11 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
     if migrate_db:
         migrate(db_path)
 
+    # One reader, shared. The scanner rasterises pages through the same engine
+    # the extractor uses, so a machine with no Tesseract degrades both in the
+    # same way rather than in two different ones.
+    extractor = Extractor(ocr=TesseractEngine())
+
     return Deps(
         settings=settings,
         clock=SystemClock(),
@@ -123,7 +133,12 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         llm_cache=SqliteLlmCacheRepository(db_path),
         events=SqliteEventRepository(db_path),
         blobs=BlobStore(settings.blob_dir),
-        extractor=Extractor(ocr=TesseractEngine()),
+        extractor=extractor,
+        scanner=Scanner(
+            ocr=extractor.ocr,
+            render_diff_enabled=settings.sanitize_render_diff,
+            render_diff_max_pages=settings.render_diff_max_pages,
+        ),
         prompts=PromptRegistry.load(_repo_root() / "prompts"),
         router=policy_for(settings.routing_policy_id),
         rubric_loader=RubricLoader(_repo_root() / "rubrics"),

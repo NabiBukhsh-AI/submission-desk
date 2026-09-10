@@ -31,6 +31,7 @@ from pipeline import (
     extract,
     intake,
     review,
+    sanitize,
     structure,
 )
 
@@ -96,7 +97,7 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="SANITIZE",
-        fn=_placeholder("SANITIZE"),
+        fn=sanitize.node,
         success_status=RunStatus.SANITIZED,
         failure_status=RunStatus.QUARANTINED,
         failure_message="A document contained content a security scanner flagged.",

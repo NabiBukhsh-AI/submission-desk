@@ -23,6 +23,7 @@ from domain.contracts import (
     DeliveryRecord,
     ErrorRecord,
     EvidenceItem,
+    IntegrityReport,
     Recommendation,
     ReviewDecision,
     RunRecord,
@@ -104,6 +105,28 @@ class CandidateRepository(Protocol):
         ...
 
     def put_source_text(self, source: SourceText, *, document_sha256: str) -> None: ...
+
+    def save_integrity_report(self, report: IntegrityReport, *, run_id: UUID | None = None) -> None:
+        """Store what the scanner found, superseding any earlier scan.
+
+        Never an update in place. A detector change must not rewrite history:
+        what the scanner thought about a document at a point in time is the
+        record a security incident is reconstructed from.
+        """
+        ...
+
+    def integrity_report_for(self, document_id: UUID) -> IntegrityReport | None: ...
+
+    def integrity_reports_for_run(self, run_id: UUID) -> list[IntegrityReport]: ...
+
+    def detector_counts(self) -> list[tuple[str, str, int]]:
+        """(detector, severity, count) across every scan.
+
+        The reason each detector carries a stable id: precision is measured per
+        detector, so a noisy pattern bank can be narrowed without touching the
+        ones that work.
+        """
+        ...
 
 
 class EvidenceRepository(Protocol):

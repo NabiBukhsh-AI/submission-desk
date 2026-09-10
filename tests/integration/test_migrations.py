@@ -62,15 +62,23 @@ def db(tmp_path: Path) -> Iterator[Path]:
 
 
 def test_migration_applies_from_an_empty_file(db: Path) -> None:
-    assert migrate(db) == [1]
-    assert current_version(db) == 1
+    """Every migration on disk, in order, from nothing.
+
+    Written against ``discover`` rather than a literal list so that adding a
+    migration is one file rather than a file and an edit here. The property is
+    "all of them, in order", and that is what is asserted.
+    """
+    expected = [version for version, _, _ in discover()]
+
+    assert migrate(db) == expected
+    assert current_version(db) == max(expected)
 
 
 def test_migration_is_idempotent(db: Path) -> None:
     """`make setup` runs this, and people run `make setup` twice."""
     migrate(db)
     assert migrate(db) == []
-    assert current_version(db) == 1
+    assert current_version(db) == max(version for version, _, _ in discover())
 
 
 def test_every_expected_table_exists(db: Path) -> None:

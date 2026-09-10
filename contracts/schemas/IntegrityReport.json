@@ -170,6 +170,13 @@
       "title": "Sanitized Char Count",
       "type": "integer"
     },
+    "threshold": {
+      "default": 0.75,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "title": "Threshold",
+      "type": "number"
+    },
     "tier": {
       "$ref": "#/$defs/IntegrityTier"
     }

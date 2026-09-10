@@ -95,6 +95,9 @@ class RunState(Contract):
     document_refs: tuple[Any, ...] = ()
     #: Hashes of the accepted documents, sorted. Part of the content key.
     document_hashes: tuple[str, ...] = ()
+    #: One report per document, from SANITIZE. The reviewer's integrity panel
+    #: renders these; the tier above is their maximum.
+    integrity_reports: tuple[Any, ...] = ()
     #: The structured profile, from STRUCTURE.
     profile: Any = None
     profile_partial: bool = False

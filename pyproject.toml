@@ -102,6 +102,13 @@ ignore = [
 "tests/unit/test_span_validator.py" = ["RUF001", "RUF002", "RUF003"]
 "tests/unit/test_span_validator_ocr.py" = ["RUF001", "RUF002", "RUF003"]
 "tests/property/test_offset_map.py" = ["RUF001", "RUF002", "RUF003"]
+# The adversarial corpus and its tests are made of confusable and invisible
+# characters. A Cyrillic letter inside a Latin word and a zero-width space
+# between two letters are the attacks these files exist to build and detect;
+# a linter asking whether they were typed by mistake has the question backwards.
+"scripts/make_adversarial_corpus.py" = ["RUF001", "RUF002", "RUF003", "PLE2502"]
+"infrastructure/security/detectors.py" = ["RUF001", "RUF002", "RUF003", "PLE2502"]
+"tests/adversarial/**" = ["RUF001", "RUF002", "RUF003", "PLE2502"]
 "domain/ports/repositories.py" = ["PLR0913"]
 "infrastructure/storage/sqlite/repositories.py" = ["PLR0913"]
 # The routed policy has one return per trigger, which is the table it

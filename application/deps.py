@@ -85,6 +85,24 @@ class Settings:
     #: results are restored to rubric order before anything reads them.
     assess_concurrency: int = 4
 
+    # --- security -----------------------------------------------------------
+    #
+    # The render comparison is the only detector with a cost, and it is the
+    # strongest one. It is switched off by page count rather than by taste: a
+    # sixty-page document would take minutes for a check that matters most on
+    # page one of a CV.
+
+    sanitize_render_diff: bool = True
+    render_diff_max_pages: int = 10
+    #: A HIGH finding at or above this halts the run; below it, a person is
+    #: told instead. Never resolves to "assume clean" in either direction.
+    suspect_confidence: float = 0.75
+    #: The second opinion on a borderline finding. Off by default because the
+    #: deterministic detectors decide, and a classifier that never runs cannot
+    #: be persuaded by the text it was asked to examine.
+    sanitize_classify: bool = False
+    sanitize_tier: ModelTier = ModelTier.CHEAP
+
 
 @dataclass(frozen=True)
 class Deps:
@@ -120,4 +138,5 @@ class Deps:
     notifier: Any = None
     budget: Any = None
     prompts: Any = None
+    scanner: Any = None
     rubric_loader: Callable[[str], Any] | None = None
