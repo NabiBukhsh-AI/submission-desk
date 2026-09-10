@@ -37,11 +37,12 @@ from domain.contracts import (
 )
 from domain.contracts.run_state import NodeStatus, RunState
 from domain.contracts.source_text import OffsetRun, PageSpan, SourceText
+from domain.fairness import mentions_protected_attribute
 from infrastructure.factory import build_deps, settings_from_env
 from infrastructure.models.fake import ScriptedModelClient
 from infrastructure.models.routing.policies import AllCheapPolicy, AllStrongPolicy, RoutedPolicy
 from infrastructure.storage.sqlite.connection import close_thread_connection
-from pipeline.assess import FORBIDDEN_LEXICON, node
+from pipeline.assess import node
 from tests.builders import criterion, rubric
 from tests.workflow.conftest import make_run_record
 
@@ -468,9 +469,41 @@ def test_the_drop_is_counted_rather_than_silent(deps: Deps) -> None:
     assert payload["dropped_forbidden"] == 1
 
 
-@pytest.mark.parametrize("term", ["age", "gender", "nationality", "married", "disab"])
-def test_the_lexicon_covers_the_protected_grounds(term: str) -> None:
-    assert term in FORBIDDEN_LEXICON
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "They are 42 years old.",
+        "Their gender is not stated.",
+        "Their nationality suggests strong English.",
+        "She is married with two children at home.",
+        "The candidate mentions a disability.",
+        "A good culture fit for this team.",
+    ],
+)
+def test_the_filter_covers_the_protected_grounds(claim: str) -> None:
+    assert mentions_protected_attribute(claim)
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "Shipped a language-model feature used by the support team.",
+        "Replaced a manual triage process with an automated one.",
+        "Fixed a race condition in the scheduler.",
+        "Rolled out single sign-on across three services.",
+        "Managed the storage of images and their metadata.",
+        "Disabled the legacy endpoint after migration.",
+    ],
+)
+def test_ordinary_engineering_prose_survives(claim: str) -> None:
+    """The failure this filter is most likely to cause.
+
+    A substring rule reads "age" inside "language" and "triage", which on an AI
+    rubric deletes the evidence for the criteria that matter most. It is worth a
+    test of its own because a dropped claim is indistinguishable from a model
+    that found nothing.
+    """
+    assert not mentions_protected_attribute(claim)
 
 
 # --- what reaches the model --------------------------------------------------------------

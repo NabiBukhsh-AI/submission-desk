@@ -13,10 +13,10 @@ difference.
 
 from __future__ import annotations
 
+from domain.contracts.rubric_loader import RubricInvalid, load_rubric, rubric_hash
 from domain.rules.aggregate import AggregationFlags, aggregate
 from domain.rules.explain import Explanation, explain, explain_reasons, render_step
 from domain.rules.resolve import CriterionResolution, resolve_criterion
-from domain.rules.rubric_loader import RubricInvalid, load_rubric, rubric_hash
 
 __all__ = [
     "AggregationFlags",

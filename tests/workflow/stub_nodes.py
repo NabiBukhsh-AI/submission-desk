@@ -1,9 +1,13 @@
-"""Nodes that exercise the runner before the real ones exist.
+"""Nodes that exercise the runner without exercising the pipeline.
 
-Temporary. Each is replaced as its phase lands, and this module is deleted once
-the last real node arrives in Phase 13. It is here so that resumption, the event
-log, and failure handling can be tested end to end today rather than being
-assumed to work until the pipeline is complete.
+Test-only, and deliberately so. The runner's job is resumption, failure
+handling, and the event log, and none of that is easier to see through a node
+that also extracts PDFs. These four make each behaviour reachable in one line:
+a node that succeeds, one that degrades, one that fails properly, and one that
+breaks its contract by raising.
+
+They live under tests/ rather than in the package because shipping a
+``raising_node`` in production code is how a stub ends up in a pipeline.
 """
 
 from __future__ import annotations

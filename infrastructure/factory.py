@@ -20,6 +20,7 @@ from infrastructure.extraction.dispatcher import Extractor
 from infrastructure.extraction.ocr import TesseractEngine
 from infrastructure.models.routing.policies import policy_for
 from infrastructure.prompts.registry import PromptRegistry
+from infrastructure.rubrics import RubricLoader
 from infrastructure.storage.blobs import BlobStore
 from infrastructure.storage.sqlite.repositories import (
     SqliteCalibrationRepository,
@@ -34,6 +35,16 @@ from infrastructure.storage.sqlite.repositories import (
     SqliteRunRepository,
 )
 from infrastructure.storage.sqlite.schema import migrate
+
+
+def _repo_root() -> Path:
+    """Where the rubrics and prompts live.
+
+    Resolved from this file rather than the working directory, so the pipeline
+    behaves the same whether it is started from the repository root, from a
+    test, or from a service manager.
+    """
+    return Path(__file__).resolve().parents[1]
 
 
 def settings_from_env(**overrides: object) -> Settings:
@@ -113,8 +124,9 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         events=SqliteEventRepository(db_path),
         blobs=BlobStore(settings.blob_dir),
         extractor=Extractor(ocr=TesseractEngine()),
-        prompts=PromptRegistry.load(Path(__file__).resolve().parents[1] / "prompts"),
+        prompts=PromptRegistry.load(_repo_root() / "prompts"),
         router=policy_for(settings.routing_policy_id),
+        rubric_loader=RubricLoader(_repo_root() / "rubrics"),
         budget=BudgetGuard(
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,

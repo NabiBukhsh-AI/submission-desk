@@ -23,7 +23,16 @@ from dataclasses import dataclass
 from application.deps import Deps
 from domain.contracts.enums import RunStatus
 from domain.contracts.run_state import NodeResult, NodeStatus, RunState
-from pipeline import assess, extract, intake, structure
+from pipeline import (
+    aggregate,
+    assess,
+    compose,
+    config_node,
+    extract,
+    intake,
+    review,
+    structure,
+)
 
 NodeFn = Callable[[RunState, Deps], NodeResult]
 
@@ -66,7 +75,7 @@ def _placeholder(name: str) -> NodeFn:
 PIPELINE: tuple[Node, ...] = (
     Node(
         name="CONFIG",
-        fn=_placeholder("CONFIG"),
+        fn=config_node.node,
         success_status=RunStatus.CREATED,
         failure_status=RunStatus.FAILED_TERMINAL,
         failure_message="The role configuration could not be loaded.",
@@ -117,14 +126,14 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="AGGREGATE",
-        fn=_placeholder("AGGREGATE"),
+        fn=aggregate.node,
         success_status=RunStatus.AGGREGATED,
         failure_status=RunStatus.MANUAL_REVIEW_REQUIRED,
         failure_message="A recommendation could not be computed.",
     ),
     Node(
         name="COMPOSE",
-        fn=_placeholder("COMPOSE"),
+        fn=compose.node,
         success_status=RunStatus.COMPOSED,
         failure_status=RunStatus.NEEDS_REVIEW,
         required=False,
@@ -132,7 +141,7 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="REVIEW",
-        fn=_placeholder("REVIEW"),
+        fn=review.node,
         success_status=RunStatus.READY_FOR_REVIEW,
         failure_status=RunStatus.NEEDS_REVIEW,
         failure_message="This candidate needs a closer look.",

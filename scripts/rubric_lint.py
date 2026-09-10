@@ -7,7 +7,7 @@ place in the queue.
 
 The file reading lives here rather than in the domain layer, which may not
 import a YAML parser. What is validated and how is decided in
-``domain/rules/rubric_loader.py``; this only feeds it.
+``domain/contracts/rubric_loader.py``; this only feeds it.
 
 Usage:
     python scripts/rubric_lint.py                 # every rubric in rubrics/

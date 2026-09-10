@@ -21,9 +21,9 @@ from domain.contracts.run_state import RunState
 from infrastructure.factory import build_deps, settings_from_env
 from infrastructure.storage.sqlite.connection import close_thread_connection
 from pipeline import registry
-from pipeline._stub_nodes import counting_node
 from pipeline.registry import Node
 from tests.workflow.conftest import make_run_record
+from tests.workflow.stub_nodes import counting_node
 
 LONG_AGO = datetime(2020, 1, 1, tzinfo=UTC)
 

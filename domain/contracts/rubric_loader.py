@@ -4,6 +4,13 @@ Takes an already-parsed mapping rather than a file path, because the domain
 layer may not read files or import a YAML parser. The caller does the reading;
 this decides whether what was read is a rubric.
 
+It lives beside the contract it validates rather than with the rule engine,
+because the adapter that reads the file needs it and adapters may not reach into
+``domain.rules``. Validating a ``RoleRubric`` is a fact about the contract; what
+the rubric then *means* is the rule engine, and that separation is what the
+dependency test enforces. ``domain.rules`` re-exports all three names, so the
+rule engine still reads as one thing from outside.
+
 The hash is what binds a run to the exact rubric that produced it. Two runs with
 the same hash were scored by the same rules, and a run whose rubric hash is not
 in the repository cannot be reproduced, which is the point.

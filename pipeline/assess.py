@@ -41,6 +41,7 @@ from domain.contracts.responses import AssessmentResponse, EvidenceCandidate
 from domain.contracts.rubric import Criterion, RoleRubric
 from domain.contracts.run_state import DomainEvent, NodeResult, NodeStatus, RunState
 from domain.contracts.source_text import Provenance, SourceText
+from domain.fairness import mentions_protected_attribute
 from domain.ports.models import BlockKind, GenerationRequest, ModelUnavailable, PromptBlock
 from domain.ports.routing import BudgetState, RoutingRequest
 from domain.provenance import chunking
@@ -54,37 +55,6 @@ from domain.rules.resolve import CriterionResolution, resolve_criterion
 #: complete.
 CLAIMED_METHOD = ExtractionMethod.DIGITAL_PDF
 CLAIMED_PROFILE = "np-v1-nfkc-ws-dash-hyphen"
-
-#: Words that would mean a claim had strayed onto protected ground. An item
-#: whose claim contains one is dropped and logged: the schema stops the model
-#: recording such a thing as a field, and this stops it arriving as prose.
-FORBIDDEN_LEXICON = (
-    "age",
-    "aged",
-    "years old",
-    "birth",
-    "gender",
-    "male",
-    "female",
-    "nationality",
-    "national",
-    "citizen",
-    "ethnic",
-    "race",
-    "religion",
-    "married",
-    "marital",
-    "single",
-    "divorced",
-    "children",
-    "pregnan",
-    "disab",
-    "personality",
-    "culture fit",
-    "cultural fit",
-    "attractive",
-    "appearance",
-)
 
 
 @dataclass
@@ -372,15 +342,18 @@ def _item_from(
         return None
 
 
-def _mentions_forbidden(claim: str) -> bool:
+def _mentions_forbidden(claim: str, criterion: Criterion | None = None) -> bool:
     """Whether a claim strayed onto protected ground.
 
     The schema stops a model recording such a thing as a field; this stops it
     arriving as prose in a claim. Both are needed, because the claim is free
     text and free text is where an instruction-following model would put it.
+
+    The matching lives in ``domain.fairness`` so that this and composition
+    cannot drift apart, and so the word-boundary rule is stated once. Substring
+    matching here previously deleted every claim containing "language".
     """
-    lowered = f" {claim.lower()} "
-    return any(term in lowered for term in FORBIDDEN_LEXICON)
+    return mentions_protected_attribute(claim)
 
 
 def _document_blocks(

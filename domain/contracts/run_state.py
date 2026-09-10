@@ -110,6 +110,10 @@ class RunState(Contract):
     #: At least one quotation could not be found in its document. Surfaced to
     #: the reviewer; never changes the band.
     invalid_span_present: bool = False
+    #: The band and its derivation, from AGGREGATE. Produced by pure functions.
+    recommendation: Any = None
+    #: What the reviewer is handed, from COMPOSE.
+    package: Any = None
 
     def with_node_complete(self, node: str, status: RunStatus) -> RunState:
         nodes = (
