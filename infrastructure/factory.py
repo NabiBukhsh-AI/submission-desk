@@ -18,6 +18,8 @@ from application.budget import BudgetGuard
 from application.deps import Deps, Settings, SystemClock
 from infrastructure.extraction.dispatcher import Extractor
 from infrastructure.extraction.ocr import TesseractEngine
+from infrastructure.integrations.csv_sink import CsvSink
+from infrastructure.integrations.slack import ConsoleNotifier
 from infrastructure.models.pricing import load as load_pricing
 from infrastructure.models.routing.policies import policy_for
 from infrastructure.observability.metrics_sql import SqliteMetricsReader
@@ -102,6 +104,20 @@ def settings_from_env(**overrides: object) -> Settings:
     return resolved
 
 
+def build_sinks(settings: Settings) -> tuple[object, ...]:
+    """Every configured destination, with the CSV file first and always.
+
+    First because it is the guarantee: it has no credentials, no network and no
+    rate limit, so a run that reaches delivery always produces a file somebody
+    can open. Every other sink is optional precisely because this one is not.
+
+    Google Sheets and Slack are absent unless a transport has been supplied,
+    which for this deployment means never: the repository ships offline, and an
+    adapter that constructed a real client at startup would make that untrue.
+    """
+    return (CsvSink(Path(settings.blob_dir).parent / "deliveries" / "results.csv"),)
+
+
 def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> Deps:
     """Construct everything a run needs.
 
@@ -146,6 +162,8 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         rubric_loader=RubricLoader(_repo_root() / "rubrics"),
         pricing=load_pricing(_repo_root() / "config" / "pricing.yaml"),
         metrics=SqliteMetricsReader(db_path),
+        sinks=build_sinks(settings),
+        notifier=ConsoleNotifier(),
         budget=BudgetGuard(
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,

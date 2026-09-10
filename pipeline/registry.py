@@ -28,6 +28,7 @@ from pipeline import (
     assess,
     compose,
     config_node,
+    deliver,
     extract,
     intake,
     review,
@@ -149,7 +150,7 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="DELIVER",
-        fn=_placeholder("DELIVER"),
+        fn=deliver.node,
         success_status=RunStatus.DELIVERED,
         failure_status=RunStatus.DELIVERY_PENDING_RETRY,
         required=False,
