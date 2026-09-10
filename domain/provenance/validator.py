@@ -41,8 +41,22 @@ class SpanThresholds:
 
     offset_tolerance: int = 400
     fuzzy_search_radius: int = 1500
+    #: Measured, not chosen. ``python -m scripts.tune_span_thresholds`` sweeps
+    #: both over a corpus of really-present spans degraded the way each
+    #: extraction path degrades them, and a corpus of fabrications close enough
+    #: to the document to be hard.
+    #:
+    #: 0.92 for digital text is the lowest value on the plateau where every
+    #: fabrication is caught: the sweep validated the value that was already
+    #: here rather than changing it.
+    #:
+    #: 0.90 for OCR replaces a guessed 0.88. At 0.88 the sweep accepted 30% of
+    #: fabrications; at 0.90 it accepts 20% and rejects one real span in
+    #: sixteen. Neither error reaches zero at any threshold, which is why the
+    #: schema, the human gate and the rejected-evidence panel are the other
+    #: three controls rather than decoration.
     fuzzy_threshold: float = 0.92
-    fuzzy_ocr_threshold: float = 0.88
+    fuzzy_ocr_threshold: float = 0.90
 
 
 @dataclass(frozen=True)

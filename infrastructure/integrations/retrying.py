@@ -47,8 +47,13 @@ def backoff_delay(
     be tested without waiting for it.
     """
     generator = rng or random
-    raw = min(base * (2 ** max(attempt - 1, 0)), MAX_DELAY_S)
-    return raw * (1 - JITTER + generator.random() * 2 * JITTER)
+    raw = base * (2 ** max(attempt - 1, 0))
+    jittered = raw * (1 - JITTER + generator.random() * 2 * JITTER)
+
+    # Capped after jitter, not before. Capping first and then multiplying by up
+    # to 1 + JITTER let the returned delay exceed the ceiling by thirty per
+    # cent, which is a cap that does not cap.
+    return min(jittered, MAX_DELAY_S)
 
 
 @dataclass

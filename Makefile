@@ -23,7 +23,7 @@ MYPY   := $(VENV_BIN)/mypy
 # The offline suite. Anything touching a real service is marked and excluded.
 OFFLINE := -m "not live"
 
-.PHONY: help setup check test schemas rubric-lint demo corpus eval eval-holdout eval-accept eval-routing eval-calibration clean
+.PHONY: help setup check test schemas rubric-lint demo corpus eval eval-holdout eval-accept eval-routing eval-calibration eval-fairness tune-thresholds clean
 
 help:
 	@echo "setup    create the virtual environment and install the project"
@@ -93,6 +93,19 @@ eval-routing:
 # disabled-by-default flag exists to wait for.
 eval-calibration:
 	$(PY) -m eval.experiments.calibration
+
+# Counterfactual pairs: the same CV under different identity tokens, blind mode
+# off and on, plus a control that runs each base CV three times with identity
+# held fixed. The control is not optional — a flip rate without its noise floor
+# is uninterpretable, and the code refuses to print one.
+eval-fairness:
+	$(PY) -m eval.fairness.runner
+
+# Sweep the two span thresholds over real and fabricated corpora, and print the
+# ROC table. The recommended operating point goes into config/limits.yaml and
+# the table into docs/EVALUATION.md.
+tune-thresholds:
+	$(PY) -m scripts.tune_span_thresholds
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist *.egg-info

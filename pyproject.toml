@@ -145,6 +145,11 @@ ignore = [
 # version being passed as a role id, which would file every card under the
 # wrong role and look like it worked.
 "domain/calibration.py" = ["PLR0913"]
+# measure_arm takes the six things that define an arm of the experiment, each
+# keyword-only. Collapsing them would remove the checking that stops blind mode
+# being passed where the noise floor goes, which would silently produce an arm
+# measured against itself.
+"eval/fairness/runner.py" = ["PLR0913"]
 # The redactor returns early per kind of value. Seven short returns read better
 # than one nested expression, and each one is a documented rule.
 "infrastructure/observability/redactor.py" = ["PLR0911"]
