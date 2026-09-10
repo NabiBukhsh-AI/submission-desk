@@ -26,6 +26,11 @@ dependencies = [
     "python-docx>=1.1",
     # Language detection over page samples. Small, offline, no model download.
     "langdetect>=1.0.9",
+    # Cosine similarity over a few hundred calibration vectors. No vector
+    # database and no approximate-nearest-neighbour library: a recruiter's
+    # history is hundreds of decisions, and an index that needs its own process
+    # to answer a millisecond question is a dependency bought with nothing.
+    "numpy>=1.26",
     # Structured logging as a processor chain. The redactor has to run before
     # any sink is reached, and a chain makes that an ordering fact rather than a
     # convention every future log call has to remember.
@@ -130,6 +135,11 @@ ignore = [
 # A dict would remove the checking that stops a latency being passed as a token
 # count, which is precisely the mistake that would corrupt a cost report.
 "application/accounting.py" = ["PLR0913"]
+# card_from takes the eight things a calibration anchor is made of, each
+# keyword-only and typed. A dict would remove the checking that stops a rubric
+# version being passed as a role id, which would file every card under the
+# wrong role and look like it worked.
+"domain/calibration.py" = ["PLR0913"]
 # The redactor returns early per kind of value. Seven short returns read better
 # than one nested expression, and each one is a documented rule.
 "infrastructure/observability/redactor.py" = ["PLR0911"]

@@ -31,4 +31,12 @@ class CalibrationCard(Contract):
     decided_at: datetime
     embedding: bytes
 
+    #: The run this decision came from.
+    #:
+    #: Recorded so a re-run of the same candidate cannot find its own earlier
+    #: card and treat it as independent corroboration. Nullable because cards
+    #: written before this field existed have no run to name, and discarding a
+    #: recruiter's history to fix a filter would be the wrong trade.
+    source_run_id: UUID | None = None
+
     _utc = field_validator("decided_at")(require_utc)

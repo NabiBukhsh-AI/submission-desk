@@ -103,6 +103,19 @@ class Settings:
     sanitize_classify: bool = False
     sanitize_tier: ModelTier = ModelTier.CHEAP
 
+    # --- calibration ---------------------------------------------------------
+    #
+    # Off by default, because it plausibly helps and has not been measured. The
+    # honest place for such a feature is behind a flag with an experiment
+    # attached, not switched on because it sounds sensible.
+
+    #: How many past decisions are offered. Three: two is not a range, and four
+    #: starts to read like a pattern to match rather than a reference.
+    calibration_top_k: int = 3
+    #: How old a decision may be before it stops being a useful anchor. Roles
+    #: drift and rubrics change; last year's decision met a different bar.
+    calibration_staleness_days: int = 180
+
 
 @dataclass(frozen=True)
 class Deps:
@@ -141,4 +154,11 @@ class Deps:
     scanner: Any = None
     pricing: Any = None
     metrics: Any = None
+    calibration_index: Any = None
+    embedder: Any = None
+    #: Removes identifiers from text before it is written down. Injected rather
+    #: than imported, because a node that reached for the concrete processor
+    #: could not be run against a fake and would put an infrastructure import
+    #: inside the pipeline.
+    redactor: Callable[[str], str] | None = None
     rubric_loader: Callable[[str], Any] | None = None

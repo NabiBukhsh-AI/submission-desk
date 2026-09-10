@@ -23,10 +23,12 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from application.deps import Deps
+from domain.calibration import card_from, should_create, summary_of
 from domain.contracts.delivery import DeliveryRecord
 from domain.contracts.enums import DeliveryStatus, RunStatus
 from domain.contracts.errors import ErrorRecord
 from domain.contracts.run_state import DomainEvent, NodeResult, NodeStatus, RunState
+from domain.ports.calibration import embedding_text
 from domain.ports.sinks import AdapterError, AdapterResult, DeliveryPayload
 
 #: What a reviewer is told when delivery was refused for lack of a decision.
@@ -120,11 +122,71 @@ def node(state: RunState, deps: Deps) -> NodeResult:
             next_status=RunStatus.DELIVERY_PENDING_RETRY,
         )
 
+    _write_calibration_card(state, deps, events)
+
     return NodeResult(
         state=state,
         status=NodeStatus.OK,
         events=tuple(events),
         next_status=RunStatus.DELIVERED,
+    )
+
+
+def _write_calibration_card(state: RunState, deps: Deps, events: list[DomainEvent]) -> None:
+    """Turn this decision into an anchor for the next candidate.
+
+    Here and nowhere else, and only from an approval. A card built anywhere
+    earlier would be built from output nobody had checked, and a system that
+    learns from its own unreviewed opinions compounds its errors instead of
+    correcting them.
+
+    Failing to write one is not a delivery failure. The candidate's result has
+    already been sent; losing an anchor costs the next run a reference, which is
+    a cost worth exactly nothing next to failing a completed delivery.
+    """
+    if deps.calibration is None or deps.embedder is None:
+        return
+
+    decision = deps.reviews.get_for_run(state.run_id)
+    if not should_create(decision):
+        return
+
+    recommendation = deps.evidence.recommendation_for_run(state.run_id)
+    if recommendation is None:
+        return
+
+    try:
+        summary_source = state.profile
+        summary = summary_of(summary_source)
+        vector = deps.embedder.embed(
+            embedding_text(summary, getattr(recommendation, "criterion_states", {}))
+        )
+        if vector is None:
+            events.append(
+                DomainEvent(name="deliver.card_skipped", payload={"reason": "no_embedding"})
+            )
+            return
+
+        card = card_from(
+            run_id=state.run_id,
+            role_id=state.role_id,
+            rubric_version=getattr(state.rubric, "version", "1.0.0"),
+            profile=summary_source,
+            recommendation=recommendation,
+            decision=decision,
+            embedding=vector,
+            redact=deps.redactor,
+        )
+        deps.calibration.add(card)
+    except Exception:
+        events.append(DomainEvent(name="deliver.card_skipped", payload={"reason": "unexpected"}))
+        return
+
+    events.append(
+        DomainEvent(
+            name="deliver.card_written",
+            payload={"card_id": str(card.card_id), "band": card.final_band.value},
+        )
     )
 
 

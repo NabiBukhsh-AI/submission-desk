@@ -105,6 +105,10 @@ class RunState(Contract):
     #: quotation taken from here resolves to a document that is not in sources
     #: and is rejected by name.
     calibration_block: str | None = None
+    #: What calibration did, from CALIBRATE. A status rather than a boolean,
+    #: because "off", "nothing to show" and "it broke" are three different
+    #: facts about a run.
+    calibration_status: str = "disabled"
     #: One entry per criterion, from ASSESS.
     assessments: tuple[Any, ...] = ()
     #: The run stopped early because it reached its ceiling. Aggregation reads

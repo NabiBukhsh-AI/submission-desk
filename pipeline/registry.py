@@ -26,6 +26,7 @@ from domain.contracts.run_state import NodeResult, NodeStatus, RunState
 from pipeline import (
     aggregate,
     assess,
+    calibrate,
     compose,
     config_node,
     deliver,
@@ -113,7 +114,7 @@ PIPELINE: tuple[Node, ...] = (
     ),
     Node(
         name="CALIBRATE",
-        fn=_placeholder("CALIBRATE"),
+        fn=calibrate.node,
         success_status=RunStatus.CALIBRATED,
         failure_status=RunStatus.CALIBRATED,
         required=False,

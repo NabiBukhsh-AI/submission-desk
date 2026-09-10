@@ -1075,8 +1075,8 @@ class SqliteCalibrationRepository(SqliteRepository):
                 INSERT OR REPLACE INTO calibration_cards (
                     card_id, role_id, rubric_version, anonymized_summary, criterion_states,
                     final_band, reviewer_reason_codes, reviewer_reason_text_redacted,
-                    decided_at, embedding
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    decided_at, embedding, source_run_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(card.card_id),
@@ -1089,6 +1089,7 @@ class SqliteCalibrationRepository(SqliteRepository):
                     card.reviewer_reason_text_redacted,
                     card.decided_at.isoformat(),
                     card.embedding,
+                    str(card.source_run_id) if card.source_run_id else None,
                 ),
             )
 
@@ -1117,6 +1118,7 @@ class SqliteCalibrationRepository(SqliteRepository):
                 reviewer_reason_text_redacted=row["reviewer_reason_text_redacted"],
                 decided_at=datetime.fromisoformat(row["decided_at"]),
                 embedding=bytes(row["embedding"]),
+                source_run_id=(UUID(row["source_run_id"]) if row["source_run_id"] else None),
             )
             for row in rows
         ]

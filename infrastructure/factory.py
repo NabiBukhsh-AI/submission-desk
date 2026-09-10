@@ -16,6 +16,8 @@ from pathlib import Path
 
 from application.budget import BudgetGuard
 from application.deps import Deps, Settings, SystemClock
+from infrastructure.calibration.embedder import LocalEmbedder
+from infrastructure.calibration.index import NumpyCalibrationIndex
 from infrastructure.extraction.dispatcher import Extractor
 from infrastructure.extraction.ocr import TesseractEngine
 from infrastructure.integrations.csv_sink import CsvSink
@@ -23,6 +25,7 @@ from infrastructure.integrations.slack import ConsoleNotifier
 from infrastructure.models.pricing import load as load_pricing
 from infrastructure.models.routing.policies import policy_for
 from infrastructure.observability.metrics_sql import SqliteMetricsReader
+from infrastructure.observability.redactor import Redactor
 from infrastructure.prompts.registry import PromptRegistry
 from infrastructure.rubrics import RubricLoader
 from infrastructure.security.scan import Scanner
@@ -82,6 +85,8 @@ def settings_from_env(**overrides: object) -> Settings:
         model_provider=os.environ.get("MODEL_PROVIDER") or "fake",
         blind_mode=flag("BLIND_MODE", True),
         calibration_enabled=flag("CALIBRATION_ENABLED", False),
+        calibration_top_k=number("CALIBRATION_TOP_K", 3),
+        calibration_staleness_days=number("CALIBRATION_STALENESS_DAYS", 180),
         demo_mode=flag("DEMO_MODE", False),
         token_ceiling_per_run=number("TOKEN_CEILING_PER_RUN", 120_000),
         max_escalations_per_candidate=number("MAX_ESCALATIONS_PER_CANDIDATE", 3),
@@ -137,6 +142,19 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
     # same way rather than in two different ones.
     extractor = Extractor(ocr=TesseractEngine())
 
+    # One repository, shared by the node that reads anchors and the node that
+    # writes them, so a card written at delivery is visible to the next run.
+    calibration = SqliteCalibrationRepository(db_path)
+    embedder = LocalEmbedder()
+
+    # One redactor, shared by the logs and by anything that stores a person's
+    # words about another person. Two would be two policies.
+    processor = Redactor()
+
+    def redact(text: str) -> str:
+        result: str = processor(None, "info", {"text": text})["text"]
+        return result
+
     return Deps(
         settings=settings,
         clock=SystemClock(),
@@ -147,7 +165,7 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         costs=SqliteCostRepository(db_path),
         errors=SqliteErrorRepository(db_path),
         deliveries=SqliteDeliveryRepository(db_path),
-        calibration=SqliteCalibrationRepository(db_path),
+        calibration=calibration,
         llm_cache=SqliteLlmCacheRepository(db_path),
         events=SqliteEventRepository(db_path),
         blobs=BlobStore(settings.blob_dir),
@@ -164,6 +182,9 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         metrics=SqliteMetricsReader(db_path),
         sinks=build_sinks(settings),
         notifier=ConsoleNotifier(),
+        embedder=embedder,
+        redactor=redact,
+        calibration_index=NumpyCalibrationIndex(calibration, embedder),
         budget=BudgetGuard(
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,

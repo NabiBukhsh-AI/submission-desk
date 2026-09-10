@@ -102,6 +102,19 @@
       "minLength": 1,
       "title": "Rubric Version",
       "type": "string"
+    },
+    "source_run_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Run Id"
     }
   },
   "required": [
