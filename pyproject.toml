@@ -26,6 +26,11 @@ dependencies = [
     "python-docx>=1.1",
     # Language detection over page samples. Small, offline, no model download.
     "langdetect>=1.0.9",
+    # The reviewer interface. Chosen because the deliverable is a working
+    # workflow rather than a front end: a recruiter needs a queue, a review
+    # page, and three buttons, and building that in a JavaScript framework
+    # would spend the sprint on something nobody is assessing.
+    "streamlit>=1.37",
 ]
 
 [project.optional-dependencies]
@@ -109,6 +114,14 @@ ignore = [
 "scripts/make_adversarial_corpus.py" = ["RUF001", "RUF002", "RUF003", "PLE2502"]
 "infrastructure/security/detectors.py" = ["RUF001", "RUF002", "RUF003", "PLE2502"]
 "tests/adversarial/**" = ["RUF001", "RUF002", "RUF003", "PLE2502"]
+# The interface is built of typographic characters on purpose: an en dash in a
+# page range and an information icon in a banner are what a person reads, and
+# replacing them with ASCII would make the pages worse to look at.
+"app/**" = ["RUF001", "RUF002", "RUF003"]
+# submit_review takes nine arguments because a decision has nine parts, every
+# one keyword-only. Collapsing them into a dict would remove the type checking
+# that stops a trust rating being passed as an elapsed time.
+"application/use_cases/submit_review.py" = ["PLR0913"]
 "domain/ports/repositories.py" = ["PLR0913"]
 "infrastructure/storage/sqlite/repositories.py" = ["PLR0913"]
 # The routed policy has one return per trigger, which is the table it

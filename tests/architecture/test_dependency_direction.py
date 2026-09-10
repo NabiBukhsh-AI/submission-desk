@@ -144,15 +144,28 @@ LAYER_RULES: dict[str, LayerRule] = {
         allowed_external=None,
         allowed_internal=frozenset(
             {
+                # Every action goes through a use case. This is the only way the
+                # interface causes anything to happen.
                 "application.use_cases",
+                # The Deps type, for annotating what a page was handed. A type is
+                # not a decision.
+                "application.deps",
+                # Contracts and the value objects a use case takes as input. The
+                # upload page has to build a CandidateRef to pass one.
                 "domain.contracts",
+                "domain.ports",
+                # The integrity wording, defined once so a second interface
+                # cannot invent a gentler version of the red banner.
+                "domain.security",
                 "infrastructure.factory",
                 "app",
             }
         ),
         reason=(
             "Rendering and command parsing, zero business logic. If a change here "
-            "alters an outcome, the change is in the wrong layer."
+            "alters an outcome, the change is in the wrong layer. What the "
+            "interface may import is types, values, and use cases: nothing that "
+            "computes a band, resolves a criterion, or moves a run."
         ),
     ),
     "eval": LayerRule(
