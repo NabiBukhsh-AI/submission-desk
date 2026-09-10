@@ -26,6 +26,10 @@ dependencies = [
     "python-docx>=1.1",
     # Language detection over page samples. Small, offline, no model download.
     "langdetect>=1.0.9",
+    # Structured logging as a processor chain. The redactor has to run before
+    # any sink is reached, and a chain makes that an ordering fact rather than a
+    # convention every future log call has to remember.
+    "structlog>=24.1",
     # The reviewer interface. Chosen because the deliverable is a working
     # workflow rather than a front end: a recruiter needs a queue, a review
     # page, and three buttons, and building that in a JavaScript framework
@@ -122,6 +126,13 @@ ignore = [
 # one keyword-only. Collapsing them into a dict would remove the type checking
 # that stops a trust rating being passed as an elapsed time.
 "application/use_cases/submit_review.py" = ["PLR0913"]
+# record_call takes what a call consumed: nine keyword-only parts, each typed.
+# A dict would remove the checking that stops a latency being passed as a token
+# count, which is precisely the mistake that would corrupt a cost report.
+"application/accounting.py" = ["PLR0913"]
+# The redactor returns early per kind of value. Seven short returns read better
+# than one nested expression, and each one is a documented rule.
+"infrastructure/observability/redactor.py" = ["PLR0911"]
 "domain/ports/repositories.py" = ["PLR0913"]
 "infrastructure/storage/sqlite/repositories.py" = ["PLR0913"]
 # The routed policy has one return per trigger, which is the table it

@@ -18,7 +18,9 @@ from application.budget import BudgetGuard
 from application.deps import Deps, Settings, SystemClock
 from infrastructure.extraction.dispatcher import Extractor
 from infrastructure.extraction.ocr import TesseractEngine
+from infrastructure.models.pricing import load as load_pricing
 from infrastructure.models.routing.policies import policy_for
+from infrastructure.observability.metrics_sql import SqliteMetricsReader
 from infrastructure.prompts.registry import PromptRegistry
 from infrastructure.rubrics import RubricLoader
 from infrastructure.security.scan import Scanner
@@ -142,6 +144,8 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         prompts=PromptRegistry.load(_repo_root() / "prompts"),
         router=policy_for(settings.routing_policy_id),
         rubric_loader=RubricLoader(_repo_root() / "rubrics"),
+        pricing=load_pricing(_repo_root() / "config" / "pricing.yaml"),
+        metrics=SqliteMetricsReader(db_path),
         budget=BudgetGuard(
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,

@@ -28,6 +28,7 @@ from domain.contracts.documents import CandidateDocument
 from domain.contracts.enums import DocumentRole, RunStatus
 from domain.contracts.errors import ErrorRecord
 from domain.contracts.run_state import DomainEvent, NodeResult, NodeStatus, RunState
+from domain.identity import content_key
 from domain.ports.sources import DocumentRef, SourceUnavailable
 
 
@@ -339,11 +340,49 @@ def node(state: RunState, deps: Deps) -> NodeResult:
             )
         )
 
+    # The real content key, now that the documents have been hashed. Until this
+    # point the run carries "pending:<run_id>": the key needs the hashes, and
+    # hashing means fetching every file, which is the cost the key exists to
+    # avoid. A run that reached a reviewer still carrying the placeholder could
+    # never be deduplicated against, so idempotency would silently never work.
+    key = _content_key_for(state, deps, sorted(hashes))
+    claimed = deps.runs.set_content_key(state.run_id, key)
+
+    if not claimed:
+        # Another run already holds this key, so these are documents the system
+        # has seen under this configuration. The run continues — somebody asked
+        # for it — and the event records that its result duplicates an earlier
+        # one.
+        events.append(DomainEvent(name="intake.duplicate_documents", payload={"key": key[:16]}))
+
     return NodeResult(
-        state=state.model_copy(update={"document_hashes": tuple(sorted(hashes))}),
+        state=state.model_copy(
+            update={
+                "document_hashes": tuple(sorted(hashes)),
+                "content_key": key if claimed else state.content_key,
+            }
+        ),
         status=NodeStatus.OK,
         events=tuple(events),
         next_status=RunStatus.INTAKE_OK,
+    )
+
+
+def _content_key_for(state: RunState, deps: Deps, hashes: list[str]) -> str:
+    """Everything that decides what a run produces, as one string.
+
+    The same documents under the same configuration produce the same key, so a
+    repeat submission is recognised rather than repeated.
+    """
+    return content_key(
+        hashes,
+        rubric_hash=state.rubric_hash or "no-rubric",
+        prompt_bundle_hash=getattr(deps.prompts, "bundle_hash", "no-prompts"),
+        model_tier_bindings_hash=getattr(deps.models, "tier_binding_hash", "") or "unbound",
+        routing_policy_id=deps.settings.routing_policy_id,
+        blind_mode=state.blind_mode,
+        calibration_enabled=state.calibration_enabled,
+        pipeline_version=deps.settings.pipeline_version,
     )
 
 

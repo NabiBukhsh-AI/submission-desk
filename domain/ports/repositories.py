@@ -12,6 +12,7 @@ and what keeps the domain layer unaware that SQLite exists at all.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from decimal import Decimal
 from typing import Protocol
 from uuid import UUID
 
@@ -81,6 +82,36 @@ class RunRepository(Protocol):
 
     def set_status(self, run_id: UUID, status: RunStatus) -> None:
         """Advance the status without claiming a node completed."""
+        ...
+
+    def set_content_key(self, run_id: UUID, content_key: str) -> bool:
+        """Replace the placeholder key once the documents have been hashed.
+
+        A run starts with ``pending:<run_id>`` because the real key needs the
+        document hashes and hashing them means fetching every file, which is the
+        cost the key exists to avoid. Intake has them, so intake sets it. A run
+        that reached a reviewer still carrying the placeholder could never be
+        deduplicated against, which is idempotency quietly not working.
+        """
+        ...
+
+    def add_usage(
+        self,
+        run_id: UUID,
+        *,
+        input_tokens: int,
+        output_tokens: int,
+        cached_input_tokens: int = 0,
+        cost_usd: Decimal | None = None,
+        escalated: bool = False,
+    ) -> None:
+        """Add one call's consumption to the run's running totals.
+
+        Incremental rather than recomputed from the ledger, so the number is
+        available to the budget guard before the next node starts rather than
+        after a query. ``cost_usd`` of ``None`` leaves the total null: a run
+        with one unpriced call has an unknown cost, not a partial one.
+        """
         ...
 
     def find_stale(self, older_than_minutes: int) -> list[RunRecord]:

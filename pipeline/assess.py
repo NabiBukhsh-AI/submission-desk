@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from application.accounting import record_call
 from application.deps import Deps
 from domain.contracts.assessment import CriterionAssessment
 from domain.contracts.enums import (
@@ -214,13 +215,20 @@ def _attempt(
     except ModelUnavailable:
         return _unassessed(criterion, "model_unavailable")
 
-    if deps.budget is not None:
-        deps.budget.record(
-            state.run_id,
-            input_tokens=result.usage.input_tokens,
-            output_tokens=result.usage.output_tokens,
-            escalated=attempt_index > 0,
-        )
+    # Guard, ledger, and the run's totals, in one call. Recording into the
+    # guard alone is what left llm_calls empty and every run reporting zero
+    # tokens while the budget ceiling worked perfectly.
+    record_call(
+        deps,
+        state.run_id,
+        call_site="assess.criterion",
+        tier=chosen_tier,
+        input_tokens=result.usage.input_tokens,
+        output_tokens=result.usage.output_tokens,
+        cached_input_tokens=getattr(result.usage, "cached_input_tokens", 0),
+        latency_ms=result.latency_ms,
+        escalated=attempt_index > 0,
+    )
 
     if not result.ok or not isinstance(result.parsed, AssessmentResponse):
         return _unassessed(criterion, "repair_failed", tier=chosen_tier)

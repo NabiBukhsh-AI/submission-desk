@@ -249,6 +249,83 @@ class SqliteRunRepository(SqliteRepository):
                 (status.value, str(run_id)),
             )
 
+    def set_content_key(self, run_id: UUID, content_key: str) -> bool:
+        """Claim the key, or report that another run already holds it.
+
+        The unique index is the point: two concurrent starts on the same
+        documents cannot both claim it, and the one that arrives second learns
+        it is a repeat rather than silently producing a parallel result.
+
+        A collision is not an error. The run was started deliberately — a
+        forced re-run, or a second upload of the same file — so it keeps its
+        placeholder key and continues. What it loses is the ability to be
+        deduplicated against later, which is the right trade: the first run
+        still holds the key that matters.
+        """
+        try:
+            with write_transaction(self.connection) as write:
+                write.execute(
+                    "UPDATE runs SET content_key = ? WHERE run_id = ?",
+                    (content_key, str(run_id)),
+                )
+        except sqlite3.IntegrityError:
+            return False
+        return True
+
+    def add_usage(
+        self,
+        run_id: UUID,
+        *,
+        input_tokens: int,
+        output_tokens: int,
+        cached_input_tokens: int = 0,
+        cost_usd: Decimal | None = None,
+        escalated: bool = False,
+    ) -> None:
+        """Add one call to the run's totals, in SQL rather than read-modify-write.
+
+        Criteria are assessed in parallel, so two threads can account for two
+        calls at the same moment. An UPDATE that adds to the stored value is
+        atomic; reading the row, adding in Python, and writing it back would
+        lose one of them.
+
+        Cost accumulates only when there is a figure. A NULL total stays NULL,
+        because a run with one unpriced call has an unknown cost rather than a
+        partial one, and a partial total presented as a whole one is the sort of
+        number that ends up in a slide.
+        """
+        with write_transaction(self.connection) as write:
+            write.execute(
+                """
+                UPDATE runs SET
+                    total_input_tokens   = total_input_tokens + ?,
+                    total_output_tokens  = total_output_tokens + ?,
+                    cached_input_tokens  = cached_input_tokens + ?,
+                    llm_call_count       = llm_call_count + 1,
+                    escalation_count     = escalation_count + ?
+                WHERE run_id = ?
+                """,
+                (
+                    input_tokens,
+                    output_tokens,
+                    cached_input_tokens,
+                    int(escalated),
+                    str(run_id),
+                ),
+            )
+
+            if cost_usd is not None:
+                row = write.execute(
+                    "SELECT total_cost_usd FROM runs WHERE run_id = ?", (str(run_id),)
+                ).fetchone()
+                current = (
+                    Decimal(row["total_cost_usd"]) if row and row["total_cost_usd"] else Decimal(0)
+                )
+                write.execute(
+                    "UPDATE runs SET total_cost_usd = ? WHERE run_id = ?",
+                    (str(current + cost_usd), str(run_id)),
+                )
+
     def find_stale(self, older_than_minutes: int) -> list[RunRecord]:
         """Runs that stopped mid-flight and never came back.
 

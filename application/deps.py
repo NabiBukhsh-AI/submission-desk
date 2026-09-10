@@ -139,4 +139,6 @@ class Deps:
     budget: Any = None
     prompts: Any = None
     scanner: Any = None
+    pricing: Any = None
+    metrics: Any = None
     rubric_loader: Callable[[str], Any] | None = None
