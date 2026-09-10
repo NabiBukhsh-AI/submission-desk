@@ -21,7 +21,9 @@ from infrastructure.calibration.index import NumpyCalibrationIndex
 from infrastructure.extraction.dispatcher import Extractor
 from infrastructure.extraction.ocr import TesseractEngine
 from infrastructure.integrations.csv_sink import CsvSink
+from infrastructure.integrations.local import LocalFolderSource
 from infrastructure.integrations.slack import ConsoleNotifier
+from infrastructure.models.fake import FakeModelClient
 from infrastructure.models.pricing import load as load_pricing
 from infrastructure.models.routing.policies import policy_for
 from infrastructure.observability.metrics_sql import SqliteMetricsReader
@@ -109,6 +111,38 @@ def settings_from_env(**overrides: object) -> Settings:
     return resolved
 
 
+def build_models(settings: Settings) -> object | None:
+    """The model client, chosen by configuration and nothing else.
+
+    The default is the fake, which replays recorded responses and refuses when
+    it has none. That refusal is the point: a fake that invented a plausible
+    answer would let a demo pass against a fixture nobody recorded, and the
+    whole repository would look like it worked.
+
+    A real provider is constructed only when one is named. Building a client
+    that reads an API key at startup would make the offline claim untrue on the
+    first import, before anything had been asked of it.
+    """
+    if settings.model_provider in ("", "fake"):
+        return FakeModelClient(
+            fixture_dir=_repo_root() / "tests" / "fixtures" / "llm",
+        )
+
+    # No provider adapter ships with this repository. Model naming and pricing
+    # are deployment configuration, and an adapter here would name a vendor in
+    # code that is meant to know only about tiers.
+    return None
+
+
+def build_source(settings: Settings) -> object:
+    """Where candidate documents come from.
+
+    A local folder by default. Drive is available and needs a transport and a
+    folder id; absent those, the offline path is the one that works.
+    """
+    return LocalFolderSource(Path(settings.blob_dir).parent / "inbox")
+
+
 def build_sinks(settings: Settings) -> tuple[object, ...]:
     """Every configured destination, with the CSV file first and always.
 
@@ -182,6 +216,8 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         metrics=SqliteMetricsReader(db_path),
         sinks=build_sinks(settings),
         notifier=ConsoleNotifier(),
+        models=build_models(settings),
+        source=build_source(settings),
         embedder=embedder,
         redactor=redact,
         calibration_index=NumpyCalibrationIndex(calibration, embedder),

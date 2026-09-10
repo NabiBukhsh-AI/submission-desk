@@ -249,6 +249,20 @@ class SqliteRunRepository(SqliteRepository):
                 (status.value, str(run_id)),
             )
 
+    def set_integrity_tier(self, run_id: UUID, tier: IntegrityTier) -> None:
+        """Record what the scanner concluded about this run's documents.
+
+        Written here rather than left on the in-flight state, because the queue,
+        the operations page and the evaluation all read the tier off the run
+        record. A tier that only existed in memory meant a quarantined run
+        looked clean everywhere a person would actually look at it.
+        """
+        with write_transaction(self.connection) as write:
+            write.execute(
+                "UPDATE runs SET integrity_tier = ? WHERE run_id = ?",
+                (tier.value, str(run_id)),
+            )
+
     def set_content_key(self, run_id: UUID, content_key: str) -> bool:
         """Claim the key, or report that another run already holds it.
 

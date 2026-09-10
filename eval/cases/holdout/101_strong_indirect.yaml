@@ -1,0 +1,22 @@
+case_id: hold-101
+name: Strong candidate who does not use the rubric's words
+description: >-
+  The same substance as dev-001, described in different vocabulary. Tests
+  whether performance on the dev split came from reading documents or from
+  matching phrases the prompts were tuned against.
+role_id: ai-engineer
+documents: [holdout/101_strong_indirect.txt]
+tags: [strong, generalisation]
+arms: [a, b, c]
+expected:
+  expected_band: advance
+  criterion_states:
+    production-engineering: met
+    python-depth: met
+    evaluation-practice: met
+  must_be_insufficient: []
+  must_flag_integrity: false
+  forbidden_claims: []
+  notes: >-
+    If dev-001 passes and this does not, the difference is the amount of
+    overfitting in the prompts.

@@ -174,6 +174,13 @@ LAYER_RULES: dict[str, LayerRule] = {
             {
                 "domain",
                 "application",
+                # The harness assembles the system it measures: a concrete
+                # source for the case documents, the response validator for the
+                # stand-in, the factory for everything else. That is what an
+                # end-to-end measurement is, and forbidding it would push the
+                # harness towards its own copy of the pipeline — which is the
+                # one thing an evaluation must never have.
+                "infrastructure",
                 "pipeline",
                 "infrastructure.factory",
                 "eval",

@@ -37,7 +37,15 @@
       "type": "object"
     },
     "expected_band": {
-      "$ref": "#/$defs/Band"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Band"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "forbidden_claims": {
       "items": {
@@ -71,10 +79,6 @@
       "title": "Notes"
     }
   },
-  "required": [
-    "criterion_states",
-    "expected_band"
-  ],
   "title": "GoldLabel",
   "type": "object"
 }

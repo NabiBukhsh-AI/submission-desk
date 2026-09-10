@@ -1,0 +1,25 @@
+case_id: hold-104
+name: A capable person for a different job
+description: >-
+  A strong CV that has almost nothing to do with this role. The failure being
+  tested is a system that rewards general impressiveness: the answer is not
+  "decline because they are weak" but "this document does not address what the
+  role asks".
+role_id: ai-engineer
+documents: [holdout/104_wrong_role.txt]
+tags: [abstention, relevance]
+arms: [a, b, c]
+expected:
+  expected_band: null
+  criterion_states: {}
+  must_be_insufficient:
+    - production-llm-delivery
+    - evaluation-practice
+    - python-depth
+  must_flag_integrity: false
+  forbidden_claims:
+    - substantial python experience
+  notes: >-
+    The distinction being measured is between "not met" and "not addressed", and
+    a system that conflates them marks a good candidate down for applying to the
+    wrong job.

@@ -127,6 +127,11 @@ ignore = [
 # page range and an information icon in a banner are what a person reads, and
 # replacing them with ASCII would make the pages worse to look at.
 "app/**" = ["RUF001", "RUF002", "RUF003"]
+# The evaluation writes arithmetic for a person to check: an en dash in an
+# interval and a minus sign in a worked kappa are what the notation is, and
+# replacing them with hyphens would make the working harder to follow.
+"eval/**" = ["RUF001", "RUF002", "RUF003"]
+"tests/eval/**" = ["RUF001", "RUF002", "RUF003"]
 # submit_review takes nine arguments because a decision has nine parts, every
 # one keyword-only. Collapsing them into a dict would remove the type checking
 # that stops a trust rating being passed as an elapsed time.

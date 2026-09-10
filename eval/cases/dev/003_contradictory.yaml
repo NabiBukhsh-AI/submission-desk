@@ -1,0 +1,20 @@
+case_id: dev-003
+name: A CV that disagrees with itself
+description: >-
+  Two statements that cannot both be true. The right behaviour is to record the
+  contradiction and route to a person, not to pick the more flattering reading
+  and score it.
+role_id: ai-engineer
+documents: [dev/003_contradictory.txt]
+tags: [contradiction, human-gate]
+arms: [a, b, c]
+expected:
+  expected_band: null
+  criterion_states:
+    evaluation-practice: contradicted
+  must_be_insufficient: []
+  must_flag_integrity: false
+  forbidden_claims: []
+  notes: >-
+    Band is deliberately null. What is being tested is the criterion state and
+    the routing, not which band a human would settle on afterwards.

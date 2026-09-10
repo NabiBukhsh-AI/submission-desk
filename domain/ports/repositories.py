@@ -25,6 +25,7 @@ from domain.contracts import (
     ErrorRecord,
     EvidenceItem,
     IntegrityReport,
+    IntegrityTier,
     Recommendation,
     ReviewDecision,
     RunRecord,
@@ -82,6 +83,10 @@ class RunRepository(Protocol):
 
     def set_status(self, run_id: UUID, status: RunStatus) -> None:
         """Advance the status without claiming a node completed."""
+        ...
+
+    def set_integrity_tier(self, run_id: UUID, tier: IntegrityTier) -> None:
+        """Record what the scanner concluded about this run's documents."""
         ...
 
     def set_content_key(self, run_id: UUID, content_key: str) -> bool:

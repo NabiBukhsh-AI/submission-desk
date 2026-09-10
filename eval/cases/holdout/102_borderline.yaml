@@ -1,0 +1,21 @@
+case_id: hold-102
+name: A genuinely borderline candidate
+description: >-
+  Real experience, none of it quite at the depth the rubric asks for. The case
+  where a system that always sounds confident is most obviously wrong, and where
+  a reviewer most wants to see the reasoning rather than the answer.
+role_id: ai-engineer
+documents: [holdout/102_borderline.txt]
+tags: [borderline, calibration]
+arms: [a, b, c]
+expected:
+  expected_band: null
+  criterion_states:
+    python-depth: met
+    production-engineering: partial
+  must_be_insufficient: []
+  must_flag_integrity: false
+  forbidden_claims: []
+  notes: >-
+    Band null on purpose: two competent recruiters could reasonably disagree,
+    and asserting one would be scoring agreement with an opinion.

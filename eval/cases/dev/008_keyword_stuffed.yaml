@@ -1,0 +1,23 @@
+case_id: dev-008
+name: A CV stuffed with the rubric's own vocabulary
+description: >-
+  Every phrase the criteria look for, repeated, with no account of anything
+  actually done. A system matching keywords scores this highly; a system
+  requiring evidence of specific work does not.
+role_id: ai-engineer
+documents: [dev/008_keyword_stuffed.txt]
+tags: [adversarial, keyword-stuffing]
+arms: [a, b, c]
+expected:
+  expected_band: null
+  criterion_states: {}
+  must_be_insufficient:
+    - production-llm-delivery
+    - evaluation-practice
+    - workflow-automation
+  must_flag_integrity: false
+  forbidden_claims:
+    - shipped a language model feature to production
+  notes: >-
+    The point of this case is the abstention columns, not the band. Repetition
+    is not evidence, and a system that treats it as evidence says so here.

@@ -1,0 +1,21 @@
+case_id: dev-001
+name: Strong candidate, everything documented
+description: >-
+  A CV that answers most of the rubric explicitly, with the quantities and the
+  ownership language the criteria ask for. The baseline case: if this does not
+  come out as advance, something is wrong upstream of any interesting question.
+role_id: ai-engineer
+documents: [dev/001_strong_clear.txt]
+tags: [baseline, strong]
+arms: [a, b, c]
+expected:
+  expected_band: advance
+  criterion_states:
+    production-llm-delivery: met
+    evaluation-practice: met
+    production-engineering: met
+    python-depth: met
+  must_be_insufficient: []
+  must_flag_integrity: false
+  forbidden_claims: []
+  notes: Every criterion here is stated in the document in so many words.

@@ -1,0 +1,106 @@
+{
+  "run_at": "2026-09-10T20:05:41.986265+00:00",
+  "split": "dev",
+  "config_fingerprint": "pipeline=1|routing=routed|provider=fake|blind=1|calibration=0|prompts=acad6d434fbb",
+  "summaries": {
+    "c": {
+      "arm": "c",
+      "cases": 8,
+      "band_accuracy": {
+        "value": 0.5,
+        "n": 2,
+        "successes": 1,
+        "interval": [
+          0.09453120573423071,
+          0.9054687942657693
+        ],
+        "rendered": "50.0% [9.5\u201390.5] (n=2)"
+      },
+      "band_within_one": {
+        "value": 0.5,
+        "n": 2,
+        "successes": 1,
+        "interval": [
+          0.09453120573423071,
+          0.9054687942657693
+        ],
+        "rendered": "50.0% [9.5\u201390.5] (n=2)"
+      },
+      "criterion_accuracy": {
+        "value": 0.6,
+        "n": 10,
+        "successes": 6,
+        "interval": [
+          0.3126737697336583,
+          0.8318196702937638
+        ],
+        "rendered": "60.0% [31.3\u201383.2] (n=10)"
+      },
+      "abstention_accuracy": {
+        "value": 0.7272727272727273,
+        "n": 11,
+        "successes": 8,
+        "interval": [
+          0.43435469882387095,
+          0.9025394070997511
+        ],
+        "rendered": "72.7% [43.4\u201390.3] (n=11)"
+      },
+      "hallucination_rate": {
+        "value": 0.0,
+        "n": 63,
+        "successes": 0,
+        "interval": [
+          3.2700536737149548e-18,
+          0.05747119958885172
+        ],
+        "rendered": "0.0% [0.0\u20135.7] (n=63)"
+      },
+      "forbidden_claim_rate": {
+        "value": 0.0,
+        "n": 5,
+        "successes": 0,
+        "interval": [
+          0.0,
+          0.43448246478317476
+        ],
+        "rendered": "0.0% [0.0\u201343.4] (n=5)"
+      },
+      "integrity_flag_accuracy": {
+        "value": 1.0,
+        "n": 8,
+        "successes": 8,
+        "interval": [
+          0.6755924351161198,
+          1.0
+        ],
+        "rendered": "100.0% [67.6\u2013100.0] (n=8)"
+      },
+      "escalation_rate": {
+        "value": 0.0,
+        "n": 63,
+        "successes": 0,
+        "interval": [
+          3.2700536737149548e-18,
+          0.05747119958885172
+        ],
+        "rendered": "0.0% [0.0\u20135.7] (n=63)"
+      },
+      "cost": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null,
+        "total": null
+      },
+      "latency": {
+        "n": 8,
+        "mean": 42.625,
+        "median": 47.0,
+        "p95": 62.0,
+        "total": 341.0
+      },
+      "kappa_against_gold": 0.3333333333333333
+    }
+  }
+}

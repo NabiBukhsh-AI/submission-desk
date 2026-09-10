@@ -114,11 +114,40 @@ def _call_sites_used_in_source() -> set[str]:
 
 
 def test_nothing_calls_a_model_at_an_unregistered_site() -> None:
-    """The check that keeps the registry honest as the pipeline fills in."""
+    """The check that keeps the registry honest as the pipeline fills in.
+
+    Two registries, and the split is deliberate. The system's has exactly five
+    entries and a test that says so, because that number is a claim about the
+    product. The evaluation declares its own comparison arm separately, so
+    measuring the alternative does not inflate the figure describing the thing
+    being measured.
+    """
+    from eval.arms.registry import EVAL_CALL_REGISTRY
+
     used = _call_sites_used_in_source()
-    unregistered = used - set(CALL_REGISTRY)
+    declared = set(CALL_REGISTRY) | set(EVAL_CALL_REGISTRY)
+    unregistered = used - declared
 
     assert unregistered == set(), f"undeclared call sites: {sorted(unregistered)}"
+
+
+def test_the_evaluation_declares_why_it_calls_a_model() -> None:
+    """The same discipline, in the harness. An evaluation arm is no exception to
+    the rule that every call is written down with a reason."""
+    from eval.arms.registry import EVAL_CALL_REGISTRY
+
+    assert EVAL_CALL_REGISTRY
+    for site, reason in EVAL_CALL_REGISTRY.items():
+        assert site.startswith("eval.")
+        assert len(reason.strip()) > 60
+
+
+def test_the_two_registries_do_not_overlap() -> None:
+    """A site in both would be counted once and explained twice, and the two
+    explanations would drift."""
+    from eval.arms.registry import EVAL_CALL_REGISTRY
+
+    assert set(CALL_REGISTRY).isdisjoint(EVAL_CALL_REGISTRY)
 
 
 def test_asking_for_an_unknown_site_says_what_is_known() -> None:

@@ -26,7 +26,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from application.deps import Deps
-from domain.contracts.enums import RunStatus
+from domain.contracts.enums import IntegrityTier, RunStatus
 from domain.contracts.errors import ErrorRecord
 from domain.contracts.run_state import NodeResult, NodeStatus, RunState
 from domain.state_machine import TERMINAL, can_transition
@@ -87,10 +87,11 @@ def run(
             break
 
         started = deps.clock.now()
+        tier_before = state.integrity_tier
         result = _execute(node, state, deps)
         latency_ms = int((deps.clock.now() - started).total_seconds() * 1000)
 
-        state = _commit_node(node, result, deps, latency_ms=latency_ms)
+        state = _commit_node(node, result, deps, latency_ms=latency_ms, tier_before=tier_before)
         executed.append(node.name)
 
         if result.failed:
@@ -148,7 +149,14 @@ def _redact(message: str) -> str:
     return message[:500]
 
 
-def _commit_node(node: Node, result: NodeResult, deps: Deps, *, latency_ms: int) -> RunState:
+def _commit_node(
+    node: Node,
+    result: NodeResult,
+    deps: Deps,
+    *,
+    latency_ms: int,
+    tier_before: IntegrityTier,
+) -> RunState:
     """Record what the node did and advance the run. One transaction.
 
     The event row is written whatever the outcome, including failure, because a
@@ -174,6 +182,14 @@ def _commit_node(node: Node, result: NodeResult, deps: Deps, *, latency_ms: int)
         deps.errors.record(result.error)
 
     state = result.state
+
+    # A node that changed the integrity tier has decided something the queue and
+    # the operations page both display. Persisting it here rather than in the
+    # node keeps every node's contract the same: return a state, and the runner
+    # writes it down.
+    if state.integrity_tier is not tier_before:
+        deps.runs.set_integrity_tier(state.run_id, state.integrity_tier)
+
     if result.failed:
         # A failed node is not a completed node. Recording it as one would make
         # a resume skip the very step that needs retrying.

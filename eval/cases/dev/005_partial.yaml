@@ -1,0 +1,24 @@
+case_id: dev-005
+name: Strong in three areas, silent in four
+description: >-
+  The common real case, and the one where the coverage gate earns its place.
+  Enough is documented to say something; not enough to say everything. The
+  system should score what it can and be explicit about the rest.
+role_id: ai-engineer
+documents: [dev/005_partial.txt]
+tags: [coverage, mixed]
+arms: [a, b, c]
+expected:
+  expected_band: null
+  criterion_states:
+    production-engineering: met
+    python-depth: met
+  must_be_insufficient:
+    - cost-awareness
+    - written-communication
+  must_flag_integrity: false
+  forbidden_claims: []
+  notes: >-
+    Band left null because a recruiter's call here depends on the role's
+    urgency, and asserting one would be asserting a judgement rather than a fact
+    about the document.

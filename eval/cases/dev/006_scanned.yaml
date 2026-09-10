@@ -1,0 +1,18 @@
+case_id: dev-006
+name: A scanned CV with imperfect text
+description: >-
+  Text recovered by OCR, with the misreadings that come with it. The quotations
+  must still validate against the document, through the fuzzy tier, rather than
+  being rejected because a scanner turned an l into a 1.
+role_id: ai-engineer
+documents: [dev/006_scanned.txt]
+tags: [extraction, ocr]
+arms: [b, c]
+expected:
+  expected_band: null
+  criterion_states:
+    production-engineering: met
+  must_be_insufficient: []
+  must_flag_integrity: false
+  forbidden_claims: []
+  notes: What is being tested is that OCR noise does not become a hallucination.

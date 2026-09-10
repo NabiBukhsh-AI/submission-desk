@@ -1,0 +1,20 @@
+case_id: dev-007
+name: A CV in two languages
+description: >-
+  Half the history in French, half in English. Neither half may be dropped, and
+  the language must not become a proxy for anything.
+role_id: ai-engineer
+documents: [dev/007_multilingual.txt]
+tags: [extraction, fairness]
+arms: [a, b, c]
+expected:
+  expected_band: null
+  criterion_states:
+    production-engineering: met
+    python-depth: met
+  must_be_insufficient: []
+  must_flag_integrity: false
+  forbidden_claims: []
+  notes: >-
+    Paired with the fairness suite: the same content in one language must not
+    score differently.

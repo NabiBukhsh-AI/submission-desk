@@ -1,0 +1,47 @@
+# What must not get worse.
+#
+# A tolerance rather than an exact comparison. This benchmark is twelve cases,
+# so one case flipping moves a proportion by eight points; a gate that fires on
+# that is a gate somebody disables within a week, and a disabled gate protects
+# nothing.
+#
+# Only metrics that are claims about the product are gated. Escalation rate and
+# latency move for legitimate reasons and are reported rather than enforced:
+# gating a number nobody promised turns every improvement into an argument.
+
+metrics:
+  # The claim the whole design rests on. Tightest tolerance of the set: a system
+  # that starts inventing answers where a person could not read one has lost the
+  # property it exists for.
+  abstention_accuracy:
+    higher_is_better: true
+    tolerance: 0.05
+
+  # The measured hallucination rate. Lower is better, so any rise beyond noise
+  # is a regression.
+  hallucination_rate:
+    higher_is_better: false
+    tolerance: 0.02
+
+  # A fabrication the case specifically warned about. No tolerance at all: one
+  # of these appearing is not noise, it is the failure the case was written to
+  # catch.
+  forbidden_claim_rate:
+    higher_is_better: false
+    tolerance: 0.0
+
+  # Documents that should have been flagged, and clean ones that should not.
+  integrity_flag_accuracy:
+    higher_is_better: true
+    tolerance: 0.0
+
+  # Agreement with the recorded decision. The loosest tolerance, because one
+  # case out of twelve is eight points and reasonable people disagree about
+  # borderline candidates.
+  band_accuracy:
+    higher_is_better: true
+    tolerance: 0.10
+
+  criterion_accuracy:
+    higher_is_better: true
+    tolerance: 0.08

@@ -26,8 +26,17 @@ class GoldLabel(Contract):
     lucky.
     """
 
-    criterion_states: dict[str, CriterionState]
-    expected_band: Band
+    criterion_states: dict[str, CriterionState] = Field(default_factory=dict)
+
+    #: What a recruiter decided, when they decided anything.
+    #:
+    #: Nullable on purpose. A case testing whether the system abstains has no
+    #: opinion about the band, and a case where two competent recruiters would
+    #: reasonably disagree should not assert one. Metrics compute only over the
+    #: fields a case actually asserts, so a null here removes the case from the
+    #: band columns rather than scoring it as a miss — otherwise the benchmark
+    #: punishes itself for being precise about what it tests.
+    expected_band: Band | None = None
     must_be_insufficient: list[str] = Field(default_factory=list)
     must_flag_integrity: bool = False
     forbidden_claims: list[str] = Field(default_factory=list)

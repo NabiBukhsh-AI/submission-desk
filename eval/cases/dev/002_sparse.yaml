@@ -1,0 +1,28 @@
+case_id: dev-002
+name: One-page CV against a nine-point rubric
+description: >-
+  Almost nothing to go on. The correct answer is that there is not enough here
+  to judge, and the failure mode being tested is a system that produces a low
+  band instead of saying so. A low band is a judgement about a candidate; the
+  honest answer is a judgement about the document.
+role_id: ai-engineer
+documents: [dev/002_sparse.txt]
+tags: [abstention, sparse]
+arms: [a, b, c]
+expected:
+  expected_band: insufficient_information
+  criterion_states: {}
+  must_be_insufficient:
+    - production-llm-delivery
+    - evaluation-practice
+    - workflow-automation
+    - data-handling
+    - cost-awareness
+    - written-communication
+  must_flag_integrity: false
+  forbidden_claims:
+    - has production experience
+    - shipped a language model feature
+  notes: >-
+    The forbidden claims are the specific inventions a sparse CV invites: a
+    reader filling gaps with what a candidate for this role usually has.

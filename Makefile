@@ -23,13 +23,14 @@ MYPY   := $(VENV_BIN)/mypy
 # The offline suite. Anything touching a real service is marked and excluded.
 OFFLINE := -m "not live"
 
-.PHONY: help setup check test schemas rubric-lint demo corpus clean
+.PHONY: help setup check test schemas rubric-lint demo corpus eval eval-holdout eval-accept eval-routing eval-calibration clean
 
 help:
 	@echo "setup    create the virtual environment and install the project"
 	@echo "check    lint, format check, types, and the offline test suite"
 	@echo "demo     run the reviewer interface against the offline defaults"
 	@echo "corpus   regenerate the adversarial document corpus"
+	@echo "eval     run the benchmark and check the regression gate"
 	@echo "test     the offline test suite only"
 	@echo "schemas  regenerate contracts/schemas/*.json"
 	@echo "rubric-lint  validate every rubric"
@@ -67,6 +68,31 @@ demo:
 # somebody to treat them as real CVs.
 corpus:
 	$(PY) -m scripts.make_adversarial_corpus
+
+# The benchmark. Runs every case in the dev split through the real use case,
+# writes CSV, JSONL and HTML, and exits non-zero if a gated metric regressed
+# beyond its tolerance.
+eval:
+	$(PY) -m eval.runner --split dev
+
+# The holdout, run once at the end. The gap between this and the dev split is
+# the honest estimate of how much dev performance was overfitting.
+eval-holdout:
+	$(PY) -m eval.runner --split holdout
+
+# Accept the current result as the thing future runs are compared against.
+eval-accept:
+	$(PY) -m eval.runner --split dev --accept
+
+# The three routing policies over the same cases, so the cost claim has a
+# number behind it and two controls either side.
+eval-routing:
+	$(PY) -m eval.experiments.routing
+
+# With and without calibration, over the same cases. The experiment the
+# disabled-by-default flag exists to wait for.
+eval-calibration:
+	$(PY) -m eval.experiments.calibration
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist *.egg-info
