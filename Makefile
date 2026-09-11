@@ -20,8 +20,14 @@ PYTEST := $(VENV_BIN)/pytest
 RUFF   := $(VENV_BIN)/ruff
 MYPY   := $(VENV_BIN)/mypy
 
-# The offline suite. Anything touching a real service is marked and excluded.
-OFFLINE := -m "not live"
+# The offline suite. Anything touching a real service is marked and excluded,
+# and so is the smoke assertion that only makes sense after `make seed`.
+OFFLINE := -m "not live and not smoke"
+
+# No recipe sets an environment variable inline. From PowerShell, make runs
+# recipes through cmd.exe, where `VAR=value command` is not a thing; from Git
+# Bash it is. Demo mode is therefore a flag the commands take, so every target
+# runs the same way from either shell.
 
 .PHONY: help setup check test schemas rubric-lint demo run seed doctor corpus eval eval-holdout eval-accept eval-routing eval-calibration eval-fairness tune-thresholds check-pii check-secrets smoke clean
 
@@ -76,12 +82,12 @@ rubric-lint:
 # Idempotent: a candidate already assessed is reused, not re-run.
 seed:
 	$(PY) -m scripts.make_synthetic_corpus
-	DEMO_MODE=true $(PY) -m app.cli.main process --role ai-engineer
+	$(PY) -m app.cli.main --demo process --role ai-engineer
 
 # The reviewer interface, against the offline defaults: the fake model provider,
 # blind mode on, no API key, demo mode on. A fresh clone runs this after seed.
 demo:
-	DEMO_MODE=true $(PY) -m streamlit run app/main.py
+	$(PY) -m app.demo
 
 doctor:
 	$(PY) -m app.cli.main doctor
@@ -95,7 +101,7 @@ run:
 # synthetic candidate reached a reviewer. If this passes, the three-command
 # setup in the README is true.
 smoke: seed
-	DEMO_MODE=true $(PYTEST) tests/workflow/test_clean_clone_smoke.py -q
+	$(PYTEST) tests/workflow/test_clean_clone_smoke.py -q -m smoke
 
 # The adversarial corpus, regenerated. Never committed: the generator is the
 # readable artefact, and a repository of files that look like real CVs invites
@@ -141,6 +147,7 @@ eval-fairness:
 tune-thresholds:
 	$(PY) -m scripts.tune_span_thresholds
 
+# POSIX tools; the one target that needs Git Bash on Windows.
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist *.egg-info
 	find . -type d -name __pycache__ -not -path "./.venv/*" -exec rm -rf {} +

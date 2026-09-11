@@ -210,4 +210,5 @@ addopts = "--strict-markers"
 markers = [
     "live: touches a real external service; excluded from the offline suite",
     "slow: takes more than a second; excluded from the default check",
+    "smoke: asserts what `make seed` left in the real data directory; runs under `make smoke` only",
 ]

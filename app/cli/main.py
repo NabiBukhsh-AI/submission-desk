@@ -15,6 +15,7 @@ call one function, and print the sentence it returns.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from collections.abc import Callable
 
@@ -118,6 +119,15 @@ def build_parser() -> argparse.ArgumentParser:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    # A flag rather than an environment variable, so the Makefile runs the
+    # same way from every shell: `VAR=value command` works in bash and not in
+    # cmd.exe, and a target that works only from Git Bash is a target that
+    # fails on the first Windows machine.
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="demo mode: synthetic documents only, nothing sent anywhere",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     for name, (_, help_text) in COMMANDS.items():
@@ -149,6 +159,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     doctor.make_output_safe()
     args = build_parser().parse_args(argv)
+    if args.demo:
+        # Set before anything reads configuration. The factory reads it once,
+        # at startup, and the demo-mode refusals run there.
+        os.environ["DEMO_MODE"] = "true"
     handler, _ = COMMANDS[args.command]
     return handler(args)
 

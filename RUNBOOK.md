@@ -6,8 +6,9 @@ with what to do when it does not work.
 
 ## 1. Setup
 
-Requirements: Python 3.11, `make`, and a POSIX shell (Git Bash on Windows is
-fine). Tesseract is optional and only needed for scanned documents.
+Requirements: Python 3.11 and `make`. On Windows, PowerShell and Git Bash
+both work for every target except `make clean`, which uses `rm` and `find`.
+Tesseract is optional and only needed for scanned documents.
 
     git clone <repository> submission-desk
     cd submission-desk

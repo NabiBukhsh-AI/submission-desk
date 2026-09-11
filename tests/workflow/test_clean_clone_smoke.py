@@ -8,15 +8,14 @@ reviewer, that the injected one was quarantined without a model call, and that
 nothing was sent anywhere.
 
 Two ways to run it. On its own, it builds everything in a temporary directory,
-so it is part of the ordinary suite and needs no state. Under `make smoke`, it
-runs after `make seed` against the real data directory, which is what CI does
-on a clean clone and is the only run that proves the Makefile targets, rather
-than the functions behind them, work.
+so it is part of the ordinary suite and needs no state. Under `make smoke`, the
+test marked ``smoke`` runs after `make seed` against the real data directory,
+which is what CI does on a clean clone and is the only run that proves the
+Makefile targets, rather than the functions behind them, work.
 """
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -159,14 +158,15 @@ def test_the_corpus_passes_the_pii_scanner(tmp_path: Path) -> None:
 # --- what CI runs against the real data directory -----------------------------------------
 
 
-@pytest.mark.skipif(
-    os.environ.get("DEMO_MODE", "").lower() not in ("1", "true", "yes", "on"),
-    reason="runs under `make smoke`, after `make seed`, against the real data directory",
-)
+@pytest.mark.smoke
 def test_make_seed_left_a_reviewable_candidate() -> None:
     """The Makefile targets, not the functions. This is the only test that
-    proves `make setup && make seed` did what the README says."""
-    deps = build_deps(settings_from_env())
+    proves `make setup && make seed` did what the README says.
+
+    Excluded from the ordinary suite by its marker, because it reads the real
+    data directory and asserts something only `make seed` puts there.
+    """
+    deps = build_deps(settings_from_env(demo_mode=True))
     try:
         runs = _all_runs(deps)
         assert any(is_reviewable(run.status) for run in runs), (
