@@ -18,30 +18,9 @@ from typing import Any
 import streamlit as st
 
 from app.components.status_chip import band_label
-from domain.contracts.enums import CriterionState, OverrideReason
+from app.vocabulary import REASON_LABELS, STATE_LABELS
+from domain.contracts.enums import CriterionState
 from domain.contracts.review import Override
-
-#: What each state is called in the picker.
-STATE_LABELS: dict[CriterionState, str] = {
-    CriterionState.MET: "Met",
-    CriterionState.PARTIAL: "Partly met",
-    CriterionState.NOT_MET: "Not met",
-    CriterionState.CONTRADICTED: "The documents disagree",
-    CriterionState.INSUFFICIENT_EVIDENCE: "Not addressed",
-}
-
-#: What each reason means, in the reviewer's terms. The code is what routes the
-#: improvement work; the sentence is what makes the code get chosen correctly.
-REASON_LABELS: dict[OverrideReason, str] = {
-    OverrideReason.EVIDENCE_MISREAD: "The quotation is there, but it does not mean that",
-    OverrideReason.EVIDENCE_MISSED: "The CV says this somewhere the system did not find",
-    OverrideReason.SPAN_WRONG: "The quotation does not match what the document says",
-    OverrideReason.RUBRIC_WRONG: "The rubric asks the wrong question for this role",
-    OverrideReason.THRESHOLD_WRONG: "The bar for this point is set too high or too low",
-    OverrideReason.CRITERION_AMBIGUOUS: "The criterion could be read more than one way",
-    OverrideReason.CONTEXT_MODEL_LACKS: "This needs knowledge the system does not have",
-    OverrideReason.OTHER: "Something else",
-}
 
 #: Short enough to type, long enough to be a reason. A single word is not one.
 MIN_REASON_CHARS = 10

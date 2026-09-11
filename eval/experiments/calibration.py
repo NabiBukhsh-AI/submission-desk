@@ -15,8 +15,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from eval.runner import RESULTS_DIR, load_cases, run_suite, write_outputs
-from infrastructure.factory import build_deps, settings_from_env
+from eval.runner import RESULTS_DIR, load_cases, run_suite, scratch_settings, write_outputs
+from infrastructure.factory import build_deps
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -29,8 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{len(cases)} case(s), calibration off then on.\n")
 
     for enabled in (False, True):
-        settings = settings_from_env(calibration_enabled=enabled)
-        deps = build_deps(settings)
+        deps = build_deps(scratch_settings(args.out, calibration_enabled=enabled))
 
         label = "on" if enabled else "off"
         result = run_suite(deps, split=f"{args.split}-calibration-{label}", cases=cases)

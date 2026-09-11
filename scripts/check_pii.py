@@ -64,6 +64,9 @@ TEXT_SUFFIXES = frozenset(
         ".html",
         ".css",
         ".js",
+        ".jsx",
+        ".ts",
+        ".tsx",
         ".sh",
         ".example",
         "",
@@ -94,10 +97,12 @@ EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 #: The same shapes the log redactor recognises. Kept deliberately narrow: a
 #: pattern loose enough to catch every telephone number also catches every
 #: version string, and a check that cries wolf is a check somebody turns off.
+#: Each shape refuses to start or end inside a longer hyphenated run, so the
+#: groups of a UUID such as 0000-0000-0000-000000000000 are not a number.
 PHONES = (
-    re.compile(r"\+\d{1,3}[\s.\-]?\(?\d{1,4}\)?(?:[\s.\-]?\d{2,4}){2,4}"),
-    re.compile(r"\(\d{3}\)\s?\d{3}[\s.\-]?\d{4}"),
-    re.compile(r"\b0\d{2,4}[\s.\-]\d{3,4}[\s.\-]?\d{3,4}\b"),
+    re.compile(r"(?<![\w\-])\+\d{1,3}[\s.\-]?\(?\d{1,4}\)?(?:[\s.\-]?\d{2,4}){2,4}(?![\w\-])"),
+    re.compile(r"(?<![\w\-])\(\d{3}\)\s?\d{3}[\s.\-]?\d{4}(?![\w\-])"),
+    re.compile(r"(?<![\w\-])0\d{2,4}[\s.\-]\d{3,4}[\s.\-]?\d{3,4}(?![\w\-])"),
 )
 
 #: RFC 2606 and RFC 6761. Reserved by standard so that documentation never has

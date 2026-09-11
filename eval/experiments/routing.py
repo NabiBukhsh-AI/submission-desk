@@ -16,8 +16,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from eval.runner import RESULTS_DIR, load_cases, run_suite, write_outputs
-from infrastructure.factory import build_deps, settings_from_env
+from eval.runner import RESULTS_DIR, load_cases, run_suite, scratch_settings, write_outputs
+from infrastructure.factory import build_deps
 
 #: The three arms of this experiment. Two controls and the thing being tested.
 POLICIES = ("all_cheap", "routed", "all_strong")
@@ -33,8 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{len(cases)} case(s), three policies.\n")
 
     for policy in POLICIES:
-        settings = settings_from_env(routing_policy_id=policy)
-        deps = build_deps(settings)
+        deps = build_deps(scratch_settings(args.out, routing_policy_id=policy))
 
         result = run_suite(deps, split=f"{args.split}-{policy}", cases=cases)
         write_outputs(result, args.out)

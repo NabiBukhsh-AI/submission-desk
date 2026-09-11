@@ -183,7 +183,7 @@ def _message_for(action: ReviewAction, override_count: int) -> str:
         else ""
     )
     return {
-        ReviewAction.APPROVE: "Approved. The package will be sent." + tail,
+        ReviewAction.APPROVE: "Approved. The package is ready to send." + tail,
         ReviewAction.REJECT: "Rejected. Nothing will be sent." + tail,
         ReviewAction.REQUEST_INFO: (
             "Marked as needing more information. The requests are ready to send." + tail

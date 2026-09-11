@@ -15,29 +15,9 @@ from typing import Any
 
 import streamlit as st
 
-from domain.contracts.enums import IntegrityTier, Severity
+from app.vocabulary import DETECTOR_LABELS, SEVERITY_LABELS
+from domain.contracts.enums import IntegrityTier
 from domain.security import banner_for
-
-#: What each detector looks for, in a sentence. A reviewer sees the id in the
-#: table and needs to know what it means without reading the source.
-DETECTOR_LABELS: dict[str, str] = {
-    "D-INSTR-IMPERATIVE": "An instruction addressed to whatever reads the file",
-    "D-ROLE-TOKEN": "Chat formatting of the kind used to talk to a model",
-    "D-HIDDEN-COLOUR": "Text the same colour as the page",
-    "D-HIDDEN-SIZE": "Text too small for a person to read",
-    "D-OFFPAGE": "Text outside the visible area of the page",
-    "D-RENDER-DIFF": "Text in the file that does not appear when the page is printed",
-    "D-ZERO-WIDTH": "Invisible characters inside words",
-    "D-HOMOGLYPH": "Letters from another alphabet disguised as ordinary ones",
-    "D-METADATA": "An instruction hidden in the document's properties",
-    "D-REPETITION": "A phrase repeated far past the point of meaning it",
-}
-
-SEVERITY_LABELS: dict[Severity, str] = {
-    Severity.HIGH: "Serious",
-    Severity.MEDIUM: "Worth checking",
-    Severity.LOW: "Minor",
-}
 
 
 def render(tier: IntegrityTier, reports: list[Any], *, debug: bool = False) -> None:

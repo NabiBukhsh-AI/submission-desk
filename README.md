@@ -29,6 +29,15 @@ says whether a deployment will work and what to fix if not.
 the offline test suite — 2,772 tests at the time of writing, none of which
 touch a network.
 
+There are two interfaces over the same use cases. `make demo` is the Streamlit
+one. The React one needs Node and two terminals:
+
+    make api       # the HTTP API on :8000, demo mode on
+    make web       # the frontend on :5173, proxying /api to it
+
+Both render what the use cases return; neither holds business logic, and the
+same architecture test walks both.
+
 ## What is in the box
 
 - **An eleven-node pipeline** — CONFIG, INTAKE, EXTRACT, SANITIZE, STRUCTURE,
@@ -130,7 +139,8 @@ else.
     application/     use cases, the runner, deps, budget, accounting.
     pipeline/        the eleven nodes, one signature each.
     infrastructure/  adapters: SQLite, blobs, extraction, security, models, integrations.
-    app/             Streamlit pages and the command line. No business logic.
+    app/             Streamlit pages, the HTTP API, and the command line. No business logic.
+    frontend/        the React interface over app/api. Vite, Tailwind, shadcn/ui.
     eval/            the harness, the arms, the fairness experiment.
     prompts/         versioned prompt files.   rubrics/    role definitions.
     config/          limits, routing, tier bindings, pricing (empty).

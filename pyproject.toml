@@ -40,6 +40,11 @@ dependencies = [
     # page, and three buttons, and building that in a JavaScript framework
     # would spend the sprint on something nobody is assessing.
     "streamlit>=1.37",
+    # The HTTP interface the React frontend talks to. Thin: every route is one
+    # use case call. Pydantic is already here, so this adds routing and little
+    # else; uvicorn serves it.
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]
@@ -56,6 +61,8 @@ dev = [
     # pretending a scan was read.
     "pytesseract>=0.3.10",
     "pillow>=10.0",
+    # Starlette's test client needs it to exercise the API in-process.
+    "httpx2",
 ]
 
 [project.scripts]

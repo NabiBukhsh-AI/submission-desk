@@ -10,6 +10,7 @@ call one function, and print the sentence it returns.
     submission-desk retry-deliveries    try again where a destination failed
     submission-desk reconcile           mark stalled runs so they can resume
     submission-desk purge               remove runs past the retention period
+    submission-desk api                 serve the HTTP interface for the React frontend
 """
 
 from __future__ import annotations
@@ -18,6 +19,8 @@ import argparse
 import os
 import sys
 from collections.abc import Callable
+
+import uvicorn
 
 from app.cli import doctor
 from application.deps import Deps
@@ -90,6 +93,12 @@ def cmd_reconcile(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_api(args: argparse.Namespace) -> int:
+    """Serve the HTTP interface. A subcommand so `--demo` applies to it too."""
+    uvicorn.run("app.api.main:app", host=args.host, port=args.port)
+    return 0
+
+
 def cmd_purge(args: argparse.Namespace) -> int:
     """Preview by default. The confirmation is the same in demo mode as in a
     pilot on purpose: a habit formed on synthetic data is carried into the
@@ -110,6 +119,7 @@ COMMANDS: dict[str, tuple[Callable[[argparse.Namespace], int], str]] = {
     "retry-deliveries": (cmd_retry_deliveries, "try again where a destination failed"),
     "reconcile": (cmd_reconcile, "mark stalled runs so they can resume"),
     "purge": (cmd_purge, "remove runs past the retention period"),
+    "api": (cmd_api, "serve the HTTP interface for the React frontend"),
 }
 
 
@@ -140,6 +150,9 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--force", action="store_true", help="re-run finished candidates")
         elif name in ("deliver", "retry-deliveries"):
             sub.add_argument("--limit", type=int, default=50)
+        elif name == "api":
+            sub.add_argument("--host", default="127.0.0.1")
+            sub.add_argument("--port", type=int, default=8000)
         elif name == "purge":
             sub.add_argument(
                 "--days",

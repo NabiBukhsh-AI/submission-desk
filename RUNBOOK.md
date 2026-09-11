@@ -26,6 +26,17 @@ directly; every Makefile target already uses the venv's interpreter.
 the type checker, and the offline test suite. It takes a few minutes and needs
 no network.
 
+The React interface (optional; the Streamlit one needs nothing more):
+
+    make api            # the HTTP API on :8000, demo mode on
+    make web            # Vite dev server on :5173, proxying /api to the API
+
+Node 20+ is required for `make web`; `npm install` runs on first use. Without
+demo mode, run the API as `submission-desk api` with your `.env` in place. For
+a static deployment, `cd frontend && npm run build` produces `frontend/dist/`,
+and `VITE_API_BASE=https://your-api.example` at build time points it at the
+API. The API has no authentication; see section 7.
+
 Docker, for parity only:
 
     docker build -t submission-desk .

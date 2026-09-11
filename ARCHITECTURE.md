@@ -31,7 +31,7 @@ one you have.
     application     use cases, the runner, Deps, the budget guard, cost accounting.
     pipeline        the eleven nodes. One signature: (RunState, Deps) -> NodeResult.
     infrastructure  every adapter: SQLite, blobs, extraction, security, models, integrations.
-    app             Streamlit pages and the command line. Rendering and parsing only.
+    app             Streamlit pages, the HTTP API, and the command line. Rendering and parsing only.
     eval            the harness, the arms, the fairness experiment.
 
 Dependencies point inward. `domain` imports nothing above it; `application` and
@@ -254,10 +254,14 @@ credentials and `.env` files — run in the hook and again in `make check`.
 
 ## 10. Review
 
-The interface is Streamlit, chosen because the deliverable is a working
-workflow rather than a front end, with a hard rule that `app/` holds no
-business logic. One frozen dataclass of session state. Every action is a use
-case call; the page shows what came back.
+Two interfaces, one rule. Streamlit was the first, chosen because the
+deliverable is a working workflow rather than a front end, with a hard rule
+that `app/` holds no business logic. The second is a thin HTTP API
+(`app/api/main.py`, one use case call per route) and a React client under
+`frontend/` that renders what it returns. The words both interfaces show —
+chips, bands, states, reasons, detector names — come from one module,
+`app/vocabulary.py`, served to the client as `/api/vocabulary`, so neither
+can invent a gentler banner. The same architecture test walks both.
 
 The review page is ordered by the questions a recruiter asks: can I trust these
 documents (the integrity banner); what does it recommend and why (the band and

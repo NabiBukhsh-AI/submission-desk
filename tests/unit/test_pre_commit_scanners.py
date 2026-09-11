@@ -112,6 +112,7 @@ def test_a_reserved_range_is_not(tmp_path: Path, number: str) -> None:
         "2021-2024 at Acme Payments",
         "p95 latency 210ms, p99 900ms",
         "run_id 01a08ced-108f-7b98-8d1a-453f4a01cfe6",
+        "the nil uuid 00000000-0000-0000-0000-000000000000",
         "version 3.11.9, pinned",
         "content hash 74c9f1b2e0",
     ],

@@ -17,33 +17,8 @@ import streamlit as st
 from app.components.status_chip import band_label, chip_for, needs_attention
 from app.main import deps, state
 from app.state import put
-from domain.contracts.enums import RunStatus
-
-#: The filters, and what each includes. Named by what a recruiter is looking
-#: for rather than by status, because "READY_FOR_REVIEW or NEEDS_REVIEW or
-#: QUARANTINED" is not a thing anybody is looking for.
-FILTERS: dict[str, tuple[RunStatus, ...]] = {
-    "Needs attention": tuple(status for status in RunStatus if needs_attention(status)),
-    "Waiting on a candidate": (RunStatus.NEEDS_INFO,),
-    "Decided": (
-        RunStatus.APPROVED,
-        RunStatus.REJECTED,
-        RunStatus.DELIVERED,
-        RunStatus.DELIVERY_PENDING_RETRY,
-    ),
-    "In progress": (
-        RunStatus.CREATED,
-        RunStatus.INTAKE_OK,
-        RunStatus.EXTRACTED,
-        RunStatus.SANITIZED,
-        RunStatus.STRUCTURED,
-        RunStatus.CALIBRATED,
-        RunStatus.ASSESSED,
-        RunStatus.AGGREGATED,
-        RunStatus.COMPOSED,
-    ),
-    "Everything": tuple(RunStatus),
-}
+from app.vocabulary import EMPTY_MESSAGES
+from app.vocabulary import QUEUE_FILTERS as FILTERS
 
 
 def render() -> None:
@@ -105,18 +80,7 @@ def _row(run, *, debug: bool) -> None:
 
 
 def _empty_message(filter_name: str) -> str:
-    """An empty list means different things under different filters.
-
-    "Nothing to review" is good news. "Nothing at all" means somebody has not
-    uploaded anything yet, and those should not read the same.
-    """
-    return {
-        "Needs attention": "Nothing is waiting on you.",
-        "Waiting on a candidate": "Nobody has been asked for more information.",
-        "Decided": "No decisions have been made yet.",
-        "In progress": "Nothing is being processed right now.",
-        "Everything": "No candidates have been uploaded yet.",
-    }.get(filter_name, "Nothing here.")
+    return EMPTY_MESSAGES.get(filter_name, "Nothing here.")
 
 
 render()

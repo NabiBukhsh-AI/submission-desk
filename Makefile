@@ -29,13 +29,16 @@ OFFLINE := -m "not live and not smoke"
 # Bash it is. Demo mode is therefore a flag the commands take, so every target
 # runs the same way from either shell.
 
-.PHONY: help setup check test schemas rubric-lint demo run seed doctor corpus eval eval-holdout eval-accept eval-routing eval-calibration eval-fairness tune-thresholds check-pii check-secrets smoke clean
+.PHONY: help setup check test schemas rubric-lint demo run seed doctor api web web-check corpus eval eval-holdout eval-accept eval-routing eval-calibration eval-fairness tune-thresholds check-pii check-secrets smoke clean
 
 help:
 	@echo "setup         create the virtual environment and install the project"
 	@echo "seed          generate the synthetic candidates and assess them offline"
 	@echo "demo          run the reviewer interface against the offline defaults"
 	@echo "doctor        check this deployment and say what to fix"
+	@echo "api           the HTTP API on :8000 (demo mode), for the React frontend"
+	@echo "web           the React frontend on :5173, proxying /api to the API"
+	@echo "web-check     lint and build the frontend"
 	@echo "check         lint, format, types, both scanners, and the offline suite"
 	@echo "test          the offline test suite only"
 	@echo "check-pii     refuse candidate contact details in the tree"
@@ -96,6 +99,18 @@ doctor:
 # present, and whatever .env configures. Read RUNBOOK.md first.
 run:
 	$(PY) -m streamlit run app/main.py
+
+# The HTTP API, in demo mode, on the port the frontend's dev proxy expects.
+# Without demo mode: `.venv/bin/uvicorn app.api.main:app`.
+api:
+	$(PY) -m app.cli.main --demo api
+
+# The React frontend. Needs Node; `npm install` runs once in frontend/.
+web:
+	cd frontend && npm install --silent && npm run dev
+
+web-check:
+	cd frontend && npm install --silent && npm run lint && npm run build
 
 # What CI runs on a clean clone: everything above, then one assertion that a
 # synthetic candidate reached a reviewer. If this passes, the three-command

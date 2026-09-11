@@ -42,6 +42,7 @@ from infrastructure.factory import build_deps, settings_from_env
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CASES_DIR = REPO_ROOT / "eval" / "cases"
 RESULTS_DIR = REPO_ROOT / "eval" / "results"
+
 GATES_FILE = REPO_ROOT / "eval" / "gates.yaml"
 BASELINE_DIR = RESULTS_DIR / "BASELINE"
 
@@ -49,6 +50,19 @@ BASELINE_DIR = RESULTS_DIR / "BASELINE"
 #: holdout is run once, and the gap between them is the honest estimate of how
 #: much dev performance was overfitting.
 SPLITS = ("dev", "holdout")
+
+
+def scratch_settings(out_dir: Path, **overrides: object) -> Any:
+    """Settings for a benchmark run, with its own database and blob store.
+
+    Under the results directory, never the default data directory: a benchmark
+    that wrote into the reviewer's database would fill the queue with twelve
+    invented candidates every time somebody measured something.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return settings_from_env(
+        db_path=str(out_dir / "eval.sqlite"), blob_dir=str(out_dir / "blobs"), **overrides
+    )
 
 
 @dataclass
@@ -518,8 +532,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=RESULTS_DIR)
     args = parser.parse_args(argv)
 
-    settings = settings_from_env()
-    deps = build_deps(settings)
+    deps = build_deps(scratch_settings(args.out))
 
     cases = None if args.split == "all" else load_cases(args.split)
     result = run_suite(deps, split=args.split, cases=cases)

@@ -261,4 +261,4 @@ def test_the_offline_target_excludes_live_tests() -> None:
     """The Makefile is what CI and a reader both run."""
     makefile = (Path(__file__).resolve().parents[2] / "Makefile").read_text(encoding="utf-8")
 
-    assert 'OFFLINE := -m "not live"' in makefile
+    assert 'OFFLINE := -m "not live and not smoke"' in makefile

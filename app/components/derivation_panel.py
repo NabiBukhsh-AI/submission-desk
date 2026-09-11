@@ -16,15 +16,16 @@ from typing import Any
 import streamlit as st
 
 from app.components.status_chip import band_label
+from app.vocabulary import STATE_LABELS
 from domain.contracts.enums import Band, CriterionState
 
-#: What each criterion state is called on the page.
-STATE_LABELS: dict[CriterionState, tuple[str, str]] = {
-    CriterionState.MET: ("Met", "✅"),
-    CriterionState.PARTIAL: ("Partly met", "◐"),
-    CriterionState.NOT_MET: ("Not met", "✗"),
-    CriterionState.CONTRADICTED: ("Documents disagree", "⚠️"),
-    CriterionState.INSUFFICIENT_EVIDENCE: ("Not addressed", "—"),
+#: The icon beside each state. The label comes from the shared vocabulary.
+STATE_ICONS: dict[CriterionState, str] = {
+    CriterionState.MET: "✅",
+    CriterionState.PARTIAL: "◐",
+    CriterionState.NOT_MET: "✗",
+    CriterionState.CONTRADICTED: "⚠️",
+    CriterionState.INSUFFICIENT_EVIDENCE: "—",
 }
 
 #: How the headline reads. Deliberately not a colour scale: "Decline" in red and
@@ -80,7 +81,8 @@ def render_states(recommendation: Any, rubric: Any) -> None:
     by_id = {item.id: item for item in rubric.criteria}
     for criterion_id, state in recommendation.criterion_states.items():
         criterion = by_id.get(criterion_id)
-        label, icon = STATE_LABELS.get(state, (state.value, "•"))
+        label = STATE_LABELS.get(state, state.value)
+        icon = STATE_ICONS.get(state, "•")
         name = criterion.label if criterion else criterion_id
         weight = f" · weight {criterion.weight}" if criterion else ""
         st.markdown(f"{icon} **{name}** — {label}{weight}")
