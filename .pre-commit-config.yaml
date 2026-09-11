@@ -1,7 +1,7 @@
-# Hooks that can run today are enabled. The rest are listed, commented, with
-# the phase that turns them on, so the intended final shape is visible rather
-# than remembered. A configuration that fails on run is worse than one that
-# grows, so nothing here points at a script that does not exist yet.
+# Every hook here has a counterpart in `make check`, so the hooks are a
+# convenience and CI is the gate. On Windows the interpreter lives under
+# .venv/Scripts/; the paths below assume a POSIX layout, which is what CI and
+# the container use. Run `make check` directly on Windows.
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -23,28 +23,33 @@ repos:
         args: [--maxkb=2048]
       - id: detect-private-key
 
-  # Enabled in Phase 2, once the contracts and the export script exist.
-  # - repo: local
-  #   hooks:
-  #     - id: mypy
-  #       name: mypy
-  #       entry: .venv/bin/mypy
-  #       language: system
-  #       pass_filenames: false
-  #     - id: schemas-current
-  #       name: committed JSON Schema matches the models
-  #       entry: .venv/bin/python scripts/export_schemas.py --check
-  #       language: system
-  #       pass_filenames: false
-
-  # Enabled in Phase 21, once the scanners exist.
-  # - repo: local
-  #   hooks:
-  #     - id: check-pii
-  #       name: no candidate PII in the commit
-  #       entry: .venv/bin/python scripts/check_pii.py
-  #       language: system
-  #     - id: check-secrets
-  #       name: no key-shaped strings and no .env
-  #       entry: .venv/bin/python scripts/check_secrets.py
-  #       language: system
+  # Local hooks. Each runs through the project's own interpreter so the hook
+  # and `make check` see the same code. `language: system` means pre-commit
+  # does not build its own environment for them, which is the point: a hook
+  # that checked a different install would be checking something else.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: .venv/bin/mypy
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: schemas-current
+        name: committed JSON Schema matches the models
+        entry: .venv/bin/python scripts/export_schemas.py --check
+        language: system
+        pass_filenames: false
+        files: ^domain/contracts/
+      # The two scanners also run in CI through `make check`, so a commit made
+      # with hooks disabled is still caught before it merges. Both take the
+      # staged filenames from pre-commit and fall back to the whole tree when
+      # run by hand.
+      - id: check-pii
+        name: no candidate contact details in the commit
+        entry: .venv/bin/python scripts/check_pii.py
+        language: system
+      - id: check-secrets
+        name: no credentials and no .env in the commit
+        entry: .venv/bin/python scripts/check_secrets.py
+        language: system

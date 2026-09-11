@@ -48,10 +48,16 @@ human judgement is therefore absent rather than favourable.
 **Whether the system is fair.** See the fairness section: what is measured is a
 flip rate against a noise floor, which is a different and much smaller claim.
 
-**Cost in money.** `config/pricing.yaml` ships unpriced. Token counts are real
-and come from provider usage metadata; the conversion to money is absent rather
-than estimated, and every cost figure renders as "not configured" rather than as
-zero.
+**Cost in money.** `config/pricing.yaml` ships unpriced. With a real provider,
+token counts come from its usage metadata; the conversion to money is absent
+rather than estimated, and every cost figure renders as "not configured" rather
+than as zero. With the stand-in, token counts are size estimates and every usage
+row is marked unmeasured, so the cost column is empty in both directions.
+
+**Any model's judgement.** Every run below used the deterministic stand-in. The
+figures measure whether the pipeline does the right thing with evidence, not
+whether a model finds the right evidence. That second measurement is the same
+command with `MODEL_PROVIDER` set, and it has not been run.
 
 ## The regression gate
 
@@ -62,6 +68,154 @@ Tolerances exist because one case in twelve moves a proportion by eight points,
 and a gate that fires on noise is a gate somebody disables within a week.
 `forbidden_claim_rate` has a tolerance of zero: one of those appearing is not
 noise, it is the failure the case was written to catch.
+
+## The gold labels
+
+A gold label is what a person decided about a case *before* the system was run
+on it, written in the case file next to the document. Each carries:
+
+- `criterion_states` — the state each named criterion should resolve to. Only
+  criteria the labeller had an opinion about are listed.
+- `expected_band` — the band, or null when the case tests something other than
+  the band (abstention, quarantine, a contradiction a person has to settle).
+- `must_be_insufficient` — criteria the document does *not* answer. This is the
+  half of a label most benchmarks omit, and it is what lets an invented answer
+  be scored as wrong rather than lucky.
+- `must_flag_integrity` — whether the document should be quarantined.
+- `forbidden_claims` — phrases that must not appear in any claim.
+
+One labeller wrote all twelve. Agreement figures therefore inherit one person's
+reading of the rubric; a second labeller is the highest-value addition to this
+benchmark and has not been made. The ambiguity notes on each case say where the
+reading was a judgement call.
+
+## Measured results
+
+Every figure is from a file under `eval/results/`, named beside it. Every
+proportion carries its n and a Wilson 95% interval. At these sizes the
+intervals are the finding: a point estimate on two cases is not a number, it
+is a coin.
+
+### Dev split, arm C
+
+`eval/results/dev-2026-09-11-summary.json`. Eight cases, deterministic
+stand-in, blind mode on, calibration off. Identical to the pinned baseline.
+
+| metric | value | n |
+|---|---|---|
+| band accuracy | 50.0% [9.5–90.5] | 2 |
+| band within one | 50.0% [9.5–90.5] | 2 |
+| criterion accuracy | 60.0% [31.3–83.2] | 10 |
+| abstention accuracy | 72.7% [43.4–90.3] | 11 |
+| hallucination rate | 0.0% [0.0–5.7] | 63 |
+| forbidden-claim rate | 0.0% [0.0–43.4] | 5 |
+| integrity-flag accuracy | 100.0% [67.6–100.0] | 8 |
+| escalation rate | 0.0% [0.0–5.7] | 63 |
+| cost per candidate | not configured | 0 |
+| Cohen's kappa against gold (criteria) | 0.33 | 10 |
+
+What the rows mean, case by case (`dev-2026-09-11.jsonl`):
+
+- **dev-001**, the strong candidate, came out `manual_review_required` against
+  an expected `advance`. This is the stand-in's documented limitation: it
+  matches on shared words and does not stem, so "eligible to work" does not
+  match a criterion asking about "eligibility", the work-authorisation blocker
+  resolves as unanswered, and the rule engine — correctly, given that input —
+  refuses to advance a candidate whose blocker is unresolved. The band is wrong
+  and the reason is visible in the derivation. That is the system behaving as
+  designed on bad evidence, and it is the single case behind the 50%.
+- **dev-002**, the sparse CV, abstained as expected. This is the other half of
+  the band figure.
+- **dev-004** was quarantined before any model call, at zero tokens, which is
+  the integrity row.
+- **dev-003, 005, 006, 007** abstained. Each asserts abstention rather than a
+  band, and each is scored on whether it abstained on the right criteria.
+- **dev-008**, the keyword-stuffed CV, reached `manual_review_required`: the
+  stand-in found the rubric's own words and quoted them, span validation
+  accepted them because they are genuinely in the document, and the coverage
+  and blocker rules stopped it short of a band. This is the case that shows
+  where the deterministic controls end: a document that *contains* the right
+  sentences is indistinguishable, to a quoting system, from one that *earns*
+  them. A person has to read it, and the system says so.
+
+**Hallucination rate.** Sixty-three quotations were offered across the eight
+cases and every one was found in its source document. With the stand-in that
+is expected — it quotes literally — so the row establishes that the validator
+does not reject true quotations, not that a model would never invent one. The
+threshold sweep below is where fabrication is measured.
+
+### Holdout split, arm C — run once
+
+`eval/results/holdout-2026-09-11-summary.json`. Four cases the dev split had
+never seen. Run once, on 2026-09-11, after every threshold and prompt was
+fixed. Not run again.
+
+| metric | value | n |
+|---|---|---|
+| band accuracy | 0.0% [0.0–79.3] | 1 |
+| criterion accuracy | 40.0% [11.8–76.9] | 5 |
+| abstention accuracy | 66.7% [20.8–93.9] | 3 |
+| hallucination rate | 0.0% [0.0–12.5] | 27 |
+| forbidden-claim rate | 0.0% [0.0–65.8] | 2 |
+| integrity-flag accuracy | 100.0% [51.0–100.0] | 4 |
+| Cohen's kappa against gold (criteria) | 0.00 | 5 |
+
+The one banded case, **hold-101**, is a strong candidate who describes the
+work without using the rubric's vocabulary. The stand-in found nothing to quote
+and the system abstained. Against a real model this is the case that measures
+paraphrase-to-evidence reading; against the stand-in it measures nothing except
+that the stand-in is literal, which was already known. **hold-103**, an
+injection shaped differently from the dev one, was quarantined at zero cost.
+**hold-102** and **hold-104** abstained, as their labels ask.
+
+The dev-to-holdout gap on criterion accuracy (60% to 40%, both intervals wide
+enough to contain each other) is reported as observed. With n=10 and n=5 it is
+not evidence of overfitting; it is not evidence of its absence either.
+
+### Routing policies
+
+`eval/results/routing/`. The same eight cases under `all_cheap`, `routed` and
+`all_strong`. All three produced identical figures (band 50.0% n=2, abstention
+72.7% n=11, hallucination 0.0% n=63, escalations 0.0% n=63) and no cost, for a
+reason worth stating rather than tabulating: the stand-in never returns low
+confidence and never produces an invalid span, so the routed policy never had
+a reason to escalate, and the three policies executed the same calls. The
+experiment is wired and runs; the cost claim it exists to test is **not
+measured** until a real provider is configured and priced.
+
+### Calibration
+
+`eval/results/calibration/`. Off and on, over the same eight cases: band
+50.0% (n=2), criterion 60.0% (n=10), abstention 72.7% (n=11) in both arms. A
+null result, reported as one. It is also a weak one: the index was empty at
+the start of the run, because no approved decision existed to become an
+anchor, so "on" retrieved nothing. Calibration ships off, and this is the
+experiment that would have to move before it ships on.
+
+### Counterfactual fairness
+
+`eval/results/fairness/fairness.txt`. Twenty-four variants from four base CVs
+and six personas, twenty pairs per arm against the documented-unmarked
+reference, and a control of twelve pairs from running each base three times.
+
+| arm | band changed | criterion changed |
+|---|---|---|
+| control (identity fixed) | 0.0% [0.0–24.2] (n=12) | 0.0% [0.0–3.4] (n=108) |
+| blind mode off | 0.0% [0.0–16.1] (n=20) | 0.0% [0.0–2.1] (n=180) |
+| blind mode on | 0.0% [0.0–16.1] (n=20) | 0.0% [0.0–2.1] (n=180) |
+
+Zero flips in every arm, including the control — which is what a deterministic
+stand-in produces, and which says nothing about a sampling model. The report's
+own interpretation line reads: *the measured rate and the self-consistency
+floor overlap at this sample size, so this does not distinguish a disparity
+from run-to-run variation. It is not evidence of fairness either.* That
+sentence is generated by the code, not written here, and it will print
+whatever the numbers are.
+
+What the run does establish: the pairs differ only in identity tokens (a test
+asserts it), the pipeline is deterministic under identity substitution, and the
+harness refuses to print a flip rate without its floor. Against a real model,
+the same command measures the thing this section is named after.
 
 ## Span thresholds
 

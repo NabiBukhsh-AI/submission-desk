@@ -59,7 +59,11 @@ class BatchSummary:
         if not self.total:
             return "There was nothing to process."
 
-        parts = [f"{self.reviewable} ready to review"]
+        # A quarantined run is reviewable — somebody has to look at it — but
+        # "ready to review" and "quarantined" are two different things to be
+        # told, and counting one under both would make four candidates read
+        # as five.
+        parts = [f"{self.reviewable - self.quarantined} ready to review"]
         if self.quarantined:
             parts.append(f"{self.quarantined} quarantined")
         if self.reused:

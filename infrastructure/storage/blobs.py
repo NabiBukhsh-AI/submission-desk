@@ -10,6 +10,7 @@ displayed and stored in a column, and they never touch a path.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 from pathlib import Path
 
@@ -78,6 +79,19 @@ class BlobStore:
 
     def exists(self, document_sha256: str) -> bool:
         return self.path_for(document_sha256).exists()
+
+    def delete(self, document_sha256: str) -> bool:
+        """Remove the bytes at a hash. Goes through ``path_for``, so the same
+        guard that stops a read escaping the root stops a delete."""
+        path = self.path_for(document_sha256)
+        if not path.exists():
+            return False
+        path.unlink()
+        # An empty shard directory is noise, not state. Removing it is safe
+        # because the next write recreates it.
+        with contextlib.suppress(OSError):
+            path.parent.rmdir()
+        return True
 
     def size(self, document_sha256: str) -> int:
         return self.path_for(document_sha256).stat().st_size

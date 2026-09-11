@@ -12,6 +12,7 @@ is usually right.
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from domain.ports.sources import CandidateRef, DocumentRef, SourceUnavailable
@@ -103,9 +104,19 @@ class LocalFolderSource:
         ]
 
     def _ref(self, candidate_id: str, path: Path) -> DocumentRef:
+        """One file, with its hash.
+
+        Hashed at listing time because the bytes are already on this disk and
+        reading them costs nothing worth avoiding. The hash is what lets the
+        use case notice that this exact document under this exact
+        configuration was already processed, and reuse that run instead of
+        starting another — which is what makes `make seed` safe to run twice.
+        A remote source cannot afford this and leaves the metadata empty.
+        """
         return DocumentRef(
             candidate_id=candidate_id,
             filename=path.name,
             external_ref=str(path.resolve()),
             size_bytes=path.stat().st_size,
+            metadata={"sha256": hashlib.sha256(path.read_bytes()).hexdigest()},
         )

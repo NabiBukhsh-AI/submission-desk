@@ -104,7 +104,9 @@ The "why" matters more than it looks. Each reason routes somewhere different:
 
 ### Your decision
 
-**Approve** — the package will be sent.
+**Approve** — the package is ready to send. Sending is a separate step,
+done from the queue or by whoever runs the system, so an approval can be
+looked at once more before anything leaves.
 **Ask for more information** — the requests go to the candidate; the candidate
 stays open.
 **Do not proceed** — nothing is sent.

@@ -8,6 +8,11 @@ pastes into a ticket.
 
 Both directions are tested. Redacting an address is easy; not mangling
 "p95 210ms" and "2018 to 2021" is what keeps the redactor switched on.
+
+check_pii: invented-identifiers. This file holds one example of every telephone
+shape the redactor must catch, and some of those shapes (an Indian mobile, a
+subdomain address) have no regulator-reserved value to write them with. Every
+identifier here is made up.
 """
 
 from __future__ import annotations

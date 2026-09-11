@@ -48,6 +48,9 @@ def render() -> None:
             replace(current, review=current.review.opened(run.run_id, run.version)),
         )
 
+    if wired.rubric_loader is None:
+        st.error("No rubrics are configured, so this candidate cannot be shown.", icon="🛑")
+        return
     rubric = wired.rubric_loader(run.role_id)
     recommendation = wired.evidence.recommendation_for_run(run.run_id)
     assessments = wired.evidence.assessments_for_run(run.run_id)

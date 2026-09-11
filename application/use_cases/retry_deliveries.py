@@ -55,7 +55,7 @@ def retry_deliveries(deps: Deps, *, limit: int = 50) -> RetrySummary:
     # Imported here rather than at module scope: pipeline sits above
     # application, so a top-level import would invert the dependency the
     # architecture test enforces. Two functions, called once.
-    from pipeline.deliver import build_payload, refuse_reason  # noqa: PLC0415
+    from pipeline.deliver import DEMO_MODE, build_payload, refuse_reason  # noqa: PLC0415
 
     summary = RetrySummary()
     pending = deps.runs.list_by_status((RunStatus.DELIVERY_PENDING_RETRY,), limit=limit)
@@ -67,6 +67,12 @@ def retry_deliveries(deps: Deps, *, limit: int = 50) -> RetrySummary:
         refusal = refuse_reason(state, deps)
         if refusal is not None:
             summary.refused.append((run.run_id, refusal))
+            continue
+
+        if deps.settings.demo_mode:
+            # With no sinks configured, "nothing outstanding" below would read
+            # as "everything delivered". In demo mode nothing is delivered.
+            summary.refused.append((run.run_id, DEMO_MODE))
             continue
 
         done = {

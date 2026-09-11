@@ -94,7 +94,7 @@ def test_an_unrecorded_call_refuses_rather_than_inventing() -> None:
 
 
 def test_the_message_says_how_to_record_one() -> None:
-    with pytest.raises(ModelUnavailable, match="fixtures record"):
+    with pytest.raises(ModelUnavailable, match="tests/fixtures/llm/"):
         FakeModelClient().structured_generate(request())
 
 

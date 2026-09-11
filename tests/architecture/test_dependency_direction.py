@@ -63,7 +63,7 @@ class LayerRule:
 
 
 # The standard library's doors to the outside world. Named explicitly in
-# ARCHITECTURE.md section 4.3 (`sqlite3`) and section 14.2 (`sqlite3` in both
+# ARCHITECTURE.md sections 2 and 12 (`sqlite3` in both
 # domain and application), generalised here to the rest of the same category.
 IO_GATEWAYS = frozenset(
     {
@@ -80,7 +80,7 @@ IO_GATEWAYS = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# The table. ARCHITECTURE.md section 18.1, section 4.3, and the layer table in
+# The table. ARCHITECTURE.md section 2 and the layer table in
 # docs/ENGINEERING_STANDARDS.md section 3 all state the same thing; this is the
 # executable copy.
 # ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ LAYER_RULES: dict[str, LayerRule] = {
             "imports a use case has inverted the dependency and cannot be swapped."
         ),
         composition_roots={
-            # ARCHITECTURE.md section 4.3 names this the composition root: the
+            # ARCHITECTURE.md section 2 names this the composition root: the
             # one module that constructs concrete adapters and hands back
             # protocol-typed handles. It therefore has to name the container it
             # fills and the policy it installs. Nothing else in infrastructure
@@ -158,6 +158,11 @@ LAYER_RULES: dict[str, LayerRule] = {
                 # cannot invent a gentler version of the red banner.
                 "domain.security",
                 "infrastructure.factory",
+                # The deployment checks behind `submission-desk doctor`. They
+                # read adapters and return pass/warn/fail; the command renders.
+                "infrastructure.doctor",
+                # Startup reconciliation, one call from the command line.
+                "application.recovery",
                 "app",
             }
         ),
@@ -331,7 +336,7 @@ def test_checker_catches_database_import_in_domain(tmp_path: Path) -> None:
 
 
 def test_checker_catches_database_import_in_application(tmp_path: Path) -> None:
-    """ARCHITECTURE.md section 14.2: no SQL and no sqlite3 escapes infrastructure,
+    """ARCHITECTURE.md section 12: no SQL and no sqlite3 escapes infrastructure,
     in either of the two inner layers."""
     _write(tmp_path, "application/runner.py", "import sqlite3\n")
 

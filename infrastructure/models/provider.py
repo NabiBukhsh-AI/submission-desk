@@ -59,6 +59,11 @@ class ProviderModelClient:
     transport: Any = None
     calls: list[dict[str, Any]] = field(default_factory=list)
 
+    @property
+    def tier_binding_hash(self) -> str:
+        """What each tier points at, as a fingerprint on every run record."""
+        return bindings_hash(self.bindings)
+
     def structured_generate(self, request: GenerationRequest) -> GenerationResult:
         binding = self.bindings.get(request.tier)
         if binding is None or not binding.is_bound:

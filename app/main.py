@@ -19,6 +19,7 @@ import streamlit as st
 
 from app.state import get, put
 from application.deps import Deps
+from application.recovery import reconcile
 from infrastructure.factory import build_deps, settings_from_env
 
 st.set_page_config(
@@ -35,8 +36,14 @@ def deps() -> Deps:
     Cached across reruns because Streamlit re-executes the whole script on every
     interaction, and running database migrations each time somebody clicks a
     button would be both slow and alarming.
+
+    Startup is also when stalled runs are reconciled: a process that died
+    mid-run left them in a processing state, and the queue should show them
+    as resumable rather than as forever in progress.
     """
-    return build_deps(settings_from_env())
+    built = build_deps(settings_from_env())
+    reconcile(built)
+    return built
 
 
 def state():

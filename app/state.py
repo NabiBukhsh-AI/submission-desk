@@ -18,8 +18,9 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 #: The one key. Anything else in st.session_state is Streamlit's own.
@@ -98,7 +99,22 @@ class SessionState:
         return replace(self, notice="")
 
 
-def initial(query: dict[str, Any] | None = None) -> SessionState:
+class SessionStore(Protocol):
+    """What the state needs from wherever it is kept.
+
+    Streamlit's session proxy is one; a plain dict in a test is another. Named
+    as a protocol because the proxy's type stubs do not declare the mapping
+    interface it implements at runtime.
+    """
+
+    def __contains__(self, key: object) -> bool: ...
+
+    def __getitem__(self, key: str) -> Any: ...
+
+    def __setitem__(self, key: str, value: Any) -> None: ...
+
+
+def initial(query: Mapping[str, Any] | None = None) -> SessionState:
     """The state a fresh session starts in.
 
     The reviewer id comes from the environment, never from a text box. A
@@ -115,20 +131,22 @@ def initial(query: dict[str, Any] | None = None) -> SessionState:
     )
 
 
-def get(session: dict[str, Any], query: dict[str, Any] | None = None) -> SessionState:
+def get(session: SessionStore, query: Mapping[str, Any] | None = None) -> SessionState:
     """Read the session, creating it on first use.
 
     Takes the store as an argument rather than importing Streamlit, so the state
     module is testable without a browser and the architecture test can assert
     that app/ holds no logic worth hiding behind a framework.
     """
-    current = session.get(SESSION_KEY)
+    # Item access rather than .get(): the protocol asks for the least a store
+    # can offer, and Streamlit's proxy types .get() in a way a dict does not.
+    current = session[SESSION_KEY] if SESSION_KEY in session else None  # noqa: SIM401
     if not isinstance(current, SessionState):
         current = initial(query)
         session[SESSION_KEY] = current
     return current
 
 
-def put(session: dict[str, Any], state: SessionState) -> SessionState:
+def put(session: SessionStore, state: SessionState) -> SessionState:
     session[SESSION_KEY] = state
     return state

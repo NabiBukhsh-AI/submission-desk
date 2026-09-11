@@ -63,6 +63,16 @@ def render() -> None:
     current = state()
     st.header("Add candidates")
 
+    if deps().settings.demo_mode:
+        # The one place a real document could enter a demo. Refused here, and
+        # refused at the composition root for every other path in.
+        st.info(
+            "Demo mode is on, so uploads are switched off and only the synthetic "
+            "candidates are read. Unset DEMO_MODE to process real documents.",
+            icon="🔒",
+        )
+        return
+
     st.caption(
         f"PDF, Word, or plain text. Up to {MAX_FILE_MB} MB per file and "
         f"{MAX_DOCUMENTS_PER_CANDIDATE} documents per candidate. "
@@ -132,7 +142,7 @@ def _process(draft: UploadDraft) -> None:
 
     candidates = []
     for candidate_id, documents in draft.grouped.items():
-        refs = []
+        refs: list[DocumentRef] = []
         for filename, payload in documents:
             # Written under the candidate id rather than the uploaded name: a
             # filename from outside never decides where bytes land.

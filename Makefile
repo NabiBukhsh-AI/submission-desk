@@ -23,18 +23,23 @@ MYPY   := $(VENV_BIN)/mypy
 # The offline suite. Anything touching a real service is marked and excluded.
 OFFLINE := -m "not live"
 
-.PHONY: help setup check test schemas rubric-lint demo corpus eval eval-holdout eval-accept eval-routing eval-calibration eval-fairness tune-thresholds clean
+.PHONY: help setup check test schemas rubric-lint demo run seed doctor corpus eval eval-holdout eval-accept eval-routing eval-calibration eval-fairness tune-thresholds check-pii check-secrets smoke clean
 
 help:
-	@echo "setup    create the virtual environment and install the project"
-	@echo "check    lint, format check, types, and the offline test suite"
-	@echo "demo     run the reviewer interface against the offline defaults"
-	@echo "corpus   regenerate the adversarial document corpus"
-	@echo "eval     run the benchmark and check the regression gate"
-	@echo "test     the offline test suite only"
-	@echo "schemas  regenerate contracts/schemas/*.json"
-	@echo "rubric-lint  validate every rubric"
-	@echo "clean    remove caches and build artefacts"
+	@echo "setup         create the virtual environment and install the project"
+	@echo "seed          generate the synthetic candidates and assess them offline"
+	@echo "demo          run the reviewer interface against the offline defaults"
+	@echo "doctor        check this deployment and say what to fix"
+	@echo "check         lint, format, types, both scanners, and the offline suite"
+	@echo "test          the offline test suite only"
+	@echo "check-pii     refuse candidate contact details in the tree"
+	@echo "check-secrets refuse credentials and .env files in the tree"
+	@echo "smoke         setup, seed, and assert a reviewable candidate (CI)"
+	@echo "corpus        regenerate the adversarial document corpus"
+	@echo "eval          run the benchmark and check the regression gate"
+	@echo "schemas       regenerate contracts/schemas/*.json"
+	@echo "rubric-lint   validate every rubric"
+	@echo "clean         remove caches and build artefacts"
 
 setup:
 	$(PYTHON) -m venv .venv
@@ -43,11 +48,19 @@ setup:
 	@echo ""
 	@echo "Done. Activate with: source $(VENV_BIN)/activate"
 
-check:
+# The two scanners run here as well as in the pre-commit hook, so a commit
+# made with hooks disabled is still caught before it merges.
+check: check-pii check-secrets
 	$(RUFF) check .
 	$(RUFF) format --check .
 	$(MYPY)
 	$(PYTEST) $(OFFLINE) -q
+
+check-pii:
+	$(PY) scripts/check_pii.py --all
+
+check-secrets:
+	$(PY) scripts/check_secrets.py --all
 
 test:
 	$(PYTEST) $(OFFLINE) -q
@@ -58,10 +71,31 @@ schemas:
 rubric-lint:
 	$(PY) scripts/rubric_lint.py
 
+# The synthetic candidates, generated and then assessed. Demo mode on, so the
+# only folder read is data/samples/synthetic and nothing is sent anywhere.
+# Idempotent: a candidate already assessed is reused, not re-run.
+seed:
+	$(PY) -m scripts.make_synthetic_corpus
+	DEMO_MODE=true $(PY) -m app.cli.main process --role ai-engineer
+
 # The reviewer interface, against the offline defaults: the fake model provider,
-# blind mode on, no API key. A fresh clone runs this.
+# blind mode on, no API key, demo mode on. A fresh clone runs this after seed.
 demo:
+	DEMO_MODE=true $(PY) -m streamlit run app/main.py
+
+doctor:
+	$(PY) -m app.cli.main doctor
+
+# The interface without demo mode, for a pilot: uploads accepted, the CSV sink
+# present, and whatever .env configures. Read RUNBOOK.md first.
+run:
 	$(PY) -m streamlit run app/main.py
+
+# What CI runs on a clean clone: everything above, then one assertion that a
+# synthetic candidate reached a reviewer. If this passes, the three-command
+# setup in the README is true.
+smoke: seed
+	DEMO_MODE=true $(PYTEST) tests/workflow/test_clean_clone_smoke.py -q
 
 # The adversarial corpus, regenerated. Never committed: the generator is the
 # readable artefact, and a repository of files that look like real CVs invites

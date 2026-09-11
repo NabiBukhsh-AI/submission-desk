@@ -158,8 +158,14 @@ def seed_run(
     status: RunStatus = RunStatus.READY_FOR_REVIEW,
     states: dict[str, CriterionState] | None = None,
     integrity: IntegrityTier = IntegrityTier.CLEAN,
+    started_at: datetime | None = None,
 ) -> RunRecord:
-    """A run in front of a reviewer, with assessments and a recommendation."""
+    """A run in front of a reviewer, with assessments and a recommendation.
+
+    ``started_at`` is settable here because it is settable nowhere else: a
+    start time never changes after creation, so a retention test that needs an
+    old run has to be old from the beginning.
+    """
     run_id = uuid4()
     resolved = states or DEFAULT_STATES
     recommendation = recommendation_for(run_id, resolved)
@@ -179,7 +185,7 @@ def seed_run(
         calibration_status="disabled",
         pipeline_version="1",
         status=status,
-        started_at=datetime.now(UTC),
+        started_at=started_at or datetime.now(UTC),
         integrity_tier=integrity,
         final_band=recommendation.band,
     )

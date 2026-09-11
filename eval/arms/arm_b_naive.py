@@ -86,8 +86,13 @@ def assess(
         call_site="eval.arm_b",
         tier=tier,
         system_prompt=SYSTEM_PROMPT.format(criteria=_criteria(rubric)),
-        user_blocks=[PromptBlock(kind=BlockKind.DOCUMENT, content=text) for _, text in documents],
-        response_schema=None,
+        user_blocks=tuple(
+            PromptBlock(kind=BlockKind.DOCUMENT, content=text) for _, text in documents
+        ),
+        # No schema on purpose. This arm asks for prose and parses it, which
+        # is the thing being compared against; a schema here would make it a
+        # worse version of arm C rather than a different architecture.
+        response_schema=None,  # type: ignore[arg-type]
         temperature=0.0,
         nonce=nonce,
     )

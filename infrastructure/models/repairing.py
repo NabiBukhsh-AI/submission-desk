@@ -43,6 +43,12 @@ class RepairingClient:
     inner: ModelClient
     repair_template: str = ""
 
+    @property
+    def tier_binding_hash(self) -> str:
+        """The inner client's fingerprint, passed through so the run record
+        names what was bound whether or not repair sits in front of it."""
+        return str(getattr(self.inner, "tier_binding_hash", "") or "")
+
     def structured_generate(self, request: GenerationRequest) -> GenerationResult:
         started = time.monotonic()
         first = self.inner.structured_generate(request)

@@ -23,11 +23,29 @@ htmlcov/
 # live outside the repository at PILOT_DATA_DIR and never enter version control.
 data/*
 !data/samples/
+# The sample corpora are generated (`make seed`, `make corpus`), so the
+# readable artefact is the generator and the output is not committed. Only
+# hand-placed samples under data/samples/ belong in history.
+data/samples/synthetic/
+data/samples/adversarial/
+data/samples/SYNTHETIC.md
 
-# Evaluation output. Results are timestamped and regenerated; only the pinned
-# baseline that regressions are compared against is tracked.
+# Evaluation output. Results are timestamped and regenerated. Tracked: the
+# pinned baseline that regressions are compared against, and the summary of
+# every run a number in docs/EVALUATION.md is taken from, so each figure there
+# traces to a file here. The per-case rows, HTML, databases and blobs are not.
 eval/results/*
 !eval/results/BASELINE
+!eval/results/*-summary.json
+!eval/results/routing/
+eval/results/routing/*
+!eval/results/routing/*-summary.json
+!eval/results/calibration/
+eval/results/calibration/*
+!eval/results/calibration/*-summary.json
+!eval/results/fairness/
+eval/results/fairness/*
+!eval/results/fairness/fairness.txt
 
 # Editor and OS
 .vscode/

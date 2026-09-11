@@ -88,9 +88,7 @@ class NumpyCalibrationIndex(CalibrationIndex):
                 excluded_stale=stale,
             )
 
-        vector = self.embedder.embed(
-            embedding_text(query.summary, query.criterion_states)  # type: ignore[arg-type]
-        )
+        vector = self.embedder.embed(embedding_text(query.summary, query.criterion_states))
         if vector is None:
             return CalibrationResult(
                 status=CalibrationStatus.EMBEDDING_FAILED,

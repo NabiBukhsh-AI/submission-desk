@@ -12,6 +12,7 @@ and what keeps the domain layer unaware that SQLite exists at all.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 from uuid import UUID
@@ -123,6 +124,19 @@ class RunRepository(Protocol):
         """Runs that stopped mid-flight, for startup reconciliation."""
         ...
 
+    def list_finished_before(self, cutoff: datetime, limit: int = 500) -> list[RunRecord]:
+        """Runs that finished before ``cutoff``, oldest first. For retention."""
+        ...
+
+    def delete(self, run_id: UUID) -> None:
+        """Remove a run and everything recorded against it.
+
+        Evidence, assessments, decisions, deliveries, costs, errors and events
+        go with it. Documents are removed from the run; whether their bytes
+        survive is decided by whether another run still refers to them.
+        """
+        ...
+
 
 class CandidateRepository(Protocol):
     def add_document(self, document: CandidateDocument, *, run_id: UUID | None = None) -> None:
@@ -130,6 +144,14 @@ class CandidateRepository(Protocol):
         ...
 
     def documents_for_run(self, run_id: UUID) -> list[CandidateDocument]: ...
+
+    def sha_referenced(self, document_sha256: str) -> bool:
+        """Whether any remaining document row still points at these bytes."""
+        ...
+
+    def delete_source_texts(self, document_sha256: str) -> None:
+        """Drop the cached extraction for a hash nothing refers to any more."""
+        ...
 
     def get_source_text(self, document_sha256: str, profile_id: str) -> SourceText | None:
         """Extraction cache, keyed independently of the rubric.
@@ -293,6 +315,10 @@ class BlobStore(Protocol):
     def get(self, document_sha256: str) -> bytes: ...
 
     def exists(self, document_sha256: str) -> bool: ...
+
+    def delete(self, document_sha256: str) -> bool:
+        """Remove the bytes at a hash. True if something was there."""
+        ...
 
     def path_for(self, document_sha256: str) -> object:
         """The address of a hash. Never derived from a filename."""

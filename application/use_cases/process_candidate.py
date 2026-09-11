@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from uuid import UUID
 
 from application.deps import Deps
 from application.runner import RunOutcome, run
@@ -40,7 +41,7 @@ PIPELINE_VERSION = "1"
 class ProcessResult:
     """What happened, and whether anything was actually done."""
 
-    run_id: object
+    run_id: UUID
     status: RunStatus
     outcome: RunOutcome | None = None
     reused_existing: bool = False

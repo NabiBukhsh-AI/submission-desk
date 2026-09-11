@@ -59,6 +59,13 @@ class Settings:
 
     db_path: str = "data/db/submission_desk.sqlite"
     blob_dir: str = "data/blobs"
+    #: Where candidate documents are read from. Empty means the inbox beside
+    #: the blob store. In demo mode this is overridden with the synthetic
+    #: corpus, and a value pointing anywhere else refuses to start.
+    inbox_dir: str = ""
+    #: Real pilot documents, outside the repository. Never set in demo mode.
+    pilot_data_dir: str = ""
+    source_adapter: str = "local"
     pipeline_version: str = "1"
     routing_policy_id: str = "routed"
     model_provider: str = "fake"
@@ -68,6 +75,8 @@ class Settings:
     token_ceiling_per_run: int = 120_000
     max_escalations_per_candidate: int = 3
     stale_run_minutes: int = 15
+    #: How long a finished run is kept before `purge` removes it and its documents.
+    retention_days: int = 30
     extraction_confidence_warn: float = 0.6
     reviewer_id: str = ""
     log_spans: bool = False

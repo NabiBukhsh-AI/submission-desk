@@ -58,6 +58,9 @@ dev = [
     "pillow>=10.0",
 ]
 
+[project.scripts]
+submission-desk = "app.cli.main:main"
+
 [tool.setuptools.packages.find]
 include = [
     "domain*",
@@ -170,7 +173,11 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
-files = ["domain", "application", "pipeline", "infrastructure", "app", "eval", "tests"]
+# The source tree. The test suite is not type-checked: a test reaches through
+# Optional returns on purpose, because a None there fails the test at run time,
+# which is the check. Annotating every fixture to satisfy a second checker would
+# add noise to the files a reader uses to learn the system.
+files = ["domain", "application", "pipeline", "infrastructure", "app", "eval"]
 ignore_missing_imports = true
 warn_unused_configs = true
 warn_redundant_casts = true

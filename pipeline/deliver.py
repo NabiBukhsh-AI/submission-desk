@@ -37,12 +37,30 @@ NOT_APPROVED = (
     "page and decide first."
 )
 
+#: What a reviewer is told in demo mode. The decision stands; the sending is
+#: what the mode exists to prevent.
+DEMO_MODE = (
+    "Demo mode is on, so nothing is sent anywhere. The decision is recorded and "
+    "the package is complete. Unset DEMO_MODE to deliver real candidates."
+)
+
 
 def node(state: RunState, deps: Deps) -> NodeResult:
     """Write the package to every configured destination."""
     refusal = refuse_reason(state, deps)
     if refusal is not None:
         return _refused(state, refusal)
+
+    if deps.settings.demo_mode:
+        # The factory built no sinks, so nothing below could send. This check
+        # is here so the run says why rather than reporting a delivery failure
+        # and queueing a retry that would never do anything.
+        return NodeResult(
+            state=state,
+            status=NodeStatus.OK,
+            events=(DomainEvent(name="deliver.skipped", payload={"reason": "demo_mode"}),),
+            next_status=state.status,
+        )
 
     payload = build_payload(state, deps)
     sinks = list(deps.sinks or ())

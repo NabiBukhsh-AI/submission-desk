@@ -1,0 +1,111 @@
+{
+  "run_at": "2026-09-11T11:20:37.065533+00:00",
+  "split": "holdout",
+  "config_fingerprint": "pipeline=1|routing=routed|provider=fake|blind=1|calibration=0|prompts=acad6d434fbb",
+  "summaries": {
+    "c": {
+      "arm": "c",
+      "cases": 4,
+      "band_accuracy": {
+        "value": 0.0,
+        "n": 1,
+        "successes": 0,
+        "interval": [
+          0.0,
+          0.7934506856227626
+        ],
+        "rendered": "0.0% [0.0\u201379.3] (n=1)"
+      },
+      "band_within_one": {
+        "value": 0.0,
+        "n": 1,
+        "successes": 0,
+        "interval": [
+          0.0,
+          0.7934506856227626
+        ],
+        "rendered": "0.0% [0.0\u201379.3] (n=1)"
+      },
+      "criterion_accuracy": {
+        "value": 0.4,
+        "n": 5,
+        "successes": 2,
+        "interval": [
+          0.11762077423264786,
+          0.769275718723987
+        ],
+        "rendered": "40.0% [11.8\u201376.9] (n=5)"
+      },
+      "abstention_accuracy": {
+        "value": 0.6666666666666666,
+        "n": 3,
+        "successes": 2,
+        "interval": [
+          0.20765960080204768,
+          0.9385080552796037
+        ],
+        "rendered": "66.7% [20.8\u201393.9] (n=3)"
+      },
+      "hallucination_rate": {
+        "value": 0.0,
+        "n": 27,
+        "successes": 0,
+        "interval": [
+          0.0,
+          0.12455502974186705
+        ],
+        "rendered": "0.0% [0.0\u201312.5] (n=27)"
+      },
+      "forbidden_claim_rate": {
+        "value": 0.0,
+        "n": 2,
+        "successes": 0,
+        "interval": [
+          0.0,
+          0.6576197724933469
+        ],
+        "rendered": "0.0% [0.0\u201365.8] (n=2)"
+      },
+      "integrity_flag_accuracy": {
+        "value": 1.0,
+        "n": 4,
+        "successes": 4,
+        "interval": [
+          0.5101091635454027,
+          1.0
+        ],
+        "rendered": "100.0% [51.0\u2013100.0] (n=4)"
+      },
+      "escalation_rate": {
+        "value": 0.0,
+        "n": 27,
+        "successes": 0,
+        "interval": [
+          0.0,
+          0.12455502974186705
+        ],
+        "rendered": "0.0% [0.0\u201312.5] (n=27)"
+      },
+      "cost": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null,
+        "total": null
+      },
+      "latency": {
+        "n": 4,
+        "mean": 268.5,
+        "median": 94.0,
+        "p95": 842.0,
+        "total": 1074.0
+      },
+      "kappa_against_gold": 0.0
+    }
+  },
+  "notes": [
+    "4 cases. Every proportion below carries its n; none is reported without one.",
+    "No model provider is configured, so these runs used a deterministic stand-in that quotes the document literally. The figures below therefore measure the pipeline \u2014 span validation, the rule engine, the coverage gate, abstention and the integrity path \u2014 and are not a claim about any model's judgement. Set MODEL_PROVIDER to measure a model with the same harness.",
+    "Arm A (a recruiter's own decisions) is not measured: no manual baseline has been recorded. The comparison against human judgement is therefore absent rather than favourable."
+  ]
+}

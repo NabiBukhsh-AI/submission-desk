@@ -25,7 +25,7 @@ These twelve rules are absolute. Violating one is a defect even if all tests pas
 3. **Evidence in states `supported` or `contradicted` must carry a verbatim span with provenance.** Absence of evidence yields `insufficient_evidence`, never a guess.
 4. **Only span-validated evidence reaches the rule engine.** Invalid spans are excluded from scoring, persisted, and surfaced to the reviewer.
 5. **`domain/` imports nothing from `infrastructure/`, `application/`, `app/`, or `eval/`, and no network or database library.** Enforced by `tests/architecture/test_dependency_direction.py`. Do not add exceptions to that test.
-6. **No agent framework.** No LangGraph, CrewAI, AutoGen, agents SDK, or equivalent. See `ARCHITECTURE.md` section 4.4 and ADR-001.
+6. **No agent framework.** No LangGraph, CrewAI, AutoGen, agents SDK, or equivalent. See `ARCHITECTURE.md` section 3 and ADR-001.
 7. **Nothing reaches `DELIVERED` except from `APPROVED` or `DELIVERY_PENDING_RETRY`**, and `APPROVED` requires a persisted `ReviewDecision`. Delivery adapters re-assert this independently.
 8. **No retry is unbounded.** Every retry path has a finite `max_attempts`. Maximum calls per LLM call site is 3: initial, repair, escalated.
 9. **No price literal appears anywhere outside `config/pricing.yaml` and its tests.** When pricing is unconfigured, cost fields are `null` and the UI says "not configured". Never zero. Never a guess.
@@ -188,7 +188,7 @@ If a request asks for one of these, say so and propose the alternative rather th
 | Candidate sourcing or an ATS | Explicit non-goal | Nothing |
 | Auto-delivery above a confidence threshold | Confidence is self-reported and weakly calibrated | The approval gate |
 | A Kubernetes manifest | Five-day single-process prototype | `make setup` |
-| A dashboard of extra charts | Decorative | The six panels in ARCHITECTURE.md section 15.3 |
+| A dashboard of extra charts | Decorative | The six panels on the operations page |
 
 ## 13. What may change, and what must never change
 
@@ -231,27 +231,31 @@ A change is complete only when **all** of the following hold. "The code works" i
 ## 16. Quick reference
 
 ```bash
-make setup           # venv, deps, db, migrations
-make seed            # synthetic corpus and sample rubrics
-make demo            # Streamlit with fixtures, no API key needed
-make check           # lint, types, schema diff, pii, secrets, all offline suites
-make test            # offline test suites only
+make setup           # venv, deps, the submission-desk command
+make seed            # synthetic corpus, assessed offline in demo mode
+make demo            # the reviewer interface, demo mode on, no API key
+make run             # the interface without demo mode, for a pilot
+make doctor          # every deployment check, with an action per line
+make smoke           # seed, then assert a reviewable candidate (CI)
+make check           # pii, secrets, lint, format, types, the offline suite
+make test            # offline test suite only
 make schemas         # regenerate contracts/schemas/*.json
 make rubric-lint     # validate every rubric
-make eval            # full harness: CSV, JSONL, HTML, regression gate
-make eval-routing    # configurations A, B, C
-make eval-calibration# calibration on vs off
+make eval            # dev split: CSV, JSONL, HTML, regression gate
+make eval-holdout    # the held-out split, reported not gated
+make eval-routing    # all_cheap, routed, all_strong
+make eval-calibration # calibration off vs on
 make eval-fairness   # counterfactual flip rate with the noise floor
+make tune-thresholds # the span-threshold sweep
 make check-pii
 make check-secrets
 
 submission-desk doctor
-submission-desk run --candidate PATH --role ai-engineer
-submission-desk run-batch --source local --role ai-engineer --limit 12
-submission-desk review show RUN_ID
+submission-desk process --role ai-engineer --limit 12
+submission-desk deliver
 submission-desk retry-deliveries
-submission-desk fixtures record --case TC-01
-submission-desk purge --older-than 30d
+submission-desk reconcile
+submission-desk purge --days 30 --dry-run
 ```
 
 **When in doubt:** prefer the deterministic option, prefer the smaller change, prefer surfacing uncertainty over resolving it, and prefer saying "this is not measured" over writing a number.

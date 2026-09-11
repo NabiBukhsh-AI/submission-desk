@@ -176,6 +176,7 @@ def _model_for(deps: Deps) -> Any:
     floor would absorb the entire experiment and the result would be
     uninterpretable by construction.
     """
+    assert deps.rubric_loader is not None, "the factory always wires a rubric loader"
     return stand_in.for_rubric(deps.rubric_loader(ROLE_ID))
 
 

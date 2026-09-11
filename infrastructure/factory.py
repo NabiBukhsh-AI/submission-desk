@@ -14,8 +14,11 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
+import yaml
+
 from application.budget import BudgetGuard
 from application.deps import Deps, Settings, SystemClock
+from domain.contracts.enums import ModelTier
 from infrastructure.calibration.embedder import LocalEmbedder
 from infrastructure.calibration.index import NumpyCalibrationIndex
 from infrastructure.extraction.dispatcher import Extractor
@@ -23,9 +26,13 @@ from infrastructure.extraction.ocr import TesseractEngine
 from infrastructure.integrations.csv_sink import CsvSink
 from infrastructure.integrations.local import LocalFolderSource
 from infrastructure.integrations.slack import ConsoleNotifier
+from infrastructure.models.cache import ResponseCache
 from infrastructure.models.fake import FakeModelClient
 from infrastructure.models.pricing import load as load_pricing
+from infrastructure.models.provider import ProviderModelClient, bindings_hash, load_bindings
+from infrastructure.models.repairing import RepairingClient
 from infrastructure.models.routing.policies import policy_for
+from infrastructure.models.stand_in import for_rubrics
 from infrastructure.observability.metrics_sql import SqliteMetricsReader
 from infrastructure.observability.redactor import Redactor
 from infrastructure.prompts.registry import PromptRegistry
@@ -83,6 +90,9 @@ def settings_from_env(**overrides: object) -> Settings:
     resolved = Settings(
         db_path=os.environ.get("DATABASE_PATH") or "data/db/submission_desk.sqlite",
         blob_dir=os.environ.get("BLOB_DIR") or "data/blobs",
+        inbox_dir=os.environ.get("INBOX_DIR") or "",
+        pilot_data_dir=os.environ.get("PILOT_DATA_DIR") or "",
+        source_adapter=(os.environ.get("SOURCE_ADAPTER") or "local").strip().lower(),
         routing_policy_id=os.environ.get("MODEL_ROUTING_POLICY") or "routed",
         model_provider=os.environ.get("MODEL_PROVIDER") or "fake",
         blind_mode=flag("BLIND_MODE", True),
@@ -93,6 +103,7 @@ def settings_from_env(**overrides: object) -> Settings:
         token_ceiling_per_run=number("TOKEN_CEILING_PER_RUN", 120_000),
         max_escalations_per_candidate=number("MAX_ESCALATIONS_PER_CANDIDATE", 3),
         stale_run_minutes=number("STALE_RUN_MINUTES", 15),
+        retention_days=number("RETENTION_DAYS", 30),
         extraction_confidence_warn=_fraction("EXTRACTION_CONFIDENCE_WARN", 0.6),
         assess_concurrency=number("ASSESS_CONCURRENCY", 4),
         assess_chunk_k=number("ASSESS_CHUNK_K", 6),
@@ -111,27 +122,140 @@ def settings_from_env(**overrides: object) -> Settings:
     return resolved
 
 
-def build_models(settings: Settings) -> object | None:
-    """The model client, chosen by configuration and nothing else.
+def build_models(
+    settings: Settings,
+    rubric_loader: RubricLoader | None = None,
+    *,
+    cache_store: object | None = None,
+    prompts: PromptRegistry | None = None,
+    transport: object | None = None,
+) -> object:
+    """The model client stack, chosen by configuration and nothing else.
 
-    The default is the fake, which replays recorded responses and refuses when
-    it has none. That refusal is the point: a fake that invented a plausible
-    answer would let a demo pass against a fixture nobody recorded, and the
-    whole repository would look like it worked.
+    Innermost, the client. The default is the fake, which replays recorded
+    responses; a call with no recorded fixture goes to the deterministic
+    stand-in, which quotes the document or says it cannot and marks its usage
+    as unmeasured, so nothing downstream presents a size estimate as a token
+    count. That is what lets a fresh clone reach a reviewable candidate with no
+    key. It is not a model: every result it produces is a claim about the
+    pipeline, and the evaluation report says so at the top.
 
-    A real provider is constructed only when one is named. Building a client
-    that reads an API key at startup would make the offline claim untrue on the
-    first import, before anything had been asked of it.
+    With ``MODEL_PROVIDER=live`` the client is the provider adapter, with the
+    tier bindings from config/models.yaml and the key from the environment.
+    The transport — the one function that performs the HTTP call — is the
+    deployment-specific piece and is injected here rather than written in:
+    the request shape a vendor expects is theirs, and a guess at it in this
+    file would name a vendor in code that knows only about tiers. Without one,
+    the first call refuses with a sentence saying so.
+
+    Around the client, in order: one schema repair at the same tier, and, for
+    the live provider only, the response cache. The cache is not applied to
+    the offline client on purpose — a deterministic stand-in gains nothing
+    from it, and the fairness control arm measures the system's consistency
+    with itself, which a cache would answer for it.
     """
+    repair_template = ""
+    if prompts is not None:
+        repair_template = prompts.get("repair/schema_repair").body
+
     if settings.model_provider in ("", "fake"):
-        return FakeModelClient(
+        loader = rubric_loader or RubricLoader(_repo_root() / "rubrics")
+        stand_in = for_rubrics(loader(role) for role in loader.available())
+        offline = FakeModelClient(
             fixture_dir=_repo_root() / "tests" / "fixtures" / "llm",
+            on_missing=stand_in.structured_generate,
+        )
+        return RepairingClient(inner=offline, repair_template=repair_template)
+
+    # Bindings from the committed file, or from the environment when the file
+    # leaves a tier empty, so a deployment can bind models without editing
+    # something that is checked in.
+    bindings = load_bindings(_read_yaml(_repo_root() / "config" / "models.yaml"))
+    from_env = {ModelTier.CHEAP: "MODEL_CHEAP_ID", ModelTier.STRONG: "MODEL_STRONG_ID"}
+    for tier, variable in from_env.items():
+        if not bindings[tier].is_bound and os.environ.get(variable, "").strip():
+            bindings[tier] = replace(bindings[tier], model=os.environ[variable].strip())
+
+    live = ProviderModelClient(
+        bindings=bindings,
+        api_key=os.environ.get("MODEL_API_KEY", "").strip(),
+        base_url=os.environ.get("MODEL_API_BASE_URL", "").strip(),
+        transport=transport,
+    )
+    fingerprint = bindings_hash(bindings)
+    repaired = RepairingClient(inner=live, repair_template=repair_template)
+    if cache_store is None:
+        return repaired
+    return ResponseCache(inner=repaired, store=cache_store, tier_binding_hash=fingerprint)
+
+
+def _read_yaml(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return loaded if isinstance(loaded, dict) else {}
+
+
+class DemoModeViolation(RuntimeError):
+    """Demo mode was asked to read documents from somewhere real.
+
+    Raised at startup, before any adapter exists. A demo that could be pointed
+    at a pilot folder by one environment variable would be safe by discipline,
+    and the whole point of the mode is that it is safe by construction.
+    """
+
+
+#: The only documents demo mode will read. Generated by
+#: ``scripts/make_synthetic_corpus.py``; every name in it is invented.
+SAMPLES_DIR = _repo_root() / "data" / "samples"
+DEMO_CORPUS = SAMPLES_DIR / "synthetic"
+
+
+def inbox_for(settings: Settings) -> Path:
+    """Where the local source reads from, demo mode aside."""
+    if settings.inbox_dir:
+        return Path(settings.inbox_dir)
+    return Path(settings.blob_dir).parent / "inbox"
+
+
+def enforce_demo_mode(settings: Settings) -> None:
+    """Refuse to start if demo mode is on and any real document path is set.
+
+    Checked against the configuration rather than the adapters, so it runs
+    before anything that could read a file exists. Every path that could name
+    real documents is listed here; a new one has to be added to this function,
+    which is the point of the function.
+    """
+    if not settings.demo_mode:
+        return
+
+    if settings.pilot_data_dir:
+        raise DemoModeViolation(
+            "DEMO_MODE is on and PILOT_DATA_DIR is set. Demo mode reads only the "
+            "synthetic corpus under data/samples/ and will not start while a path "
+            "to real documents is configured. Unset one of them."
         )
 
-    # No provider adapter ships with this repository. Model naming and pricing
-    # are deployment configuration, and an adapter here would name a vendor in
-    # code that is meant to know only about tiers.
-    return None
+    if settings.source_adapter != "local":
+        raise DemoModeViolation(
+            f"DEMO_MODE is on and SOURCE_ADAPTER is {settings.source_adapter!r}. "
+            "Demo mode reads only the local synthetic corpus. Set SOURCE_ADAPTER=local "
+            "or unset DEMO_MODE."
+        )
+
+    if settings.inbox_dir and not _is_within(Path(settings.inbox_dir), SAMPLES_DIR):
+        raise DemoModeViolation(
+            f"DEMO_MODE is on and INBOX_DIR points at {settings.inbox_dir}, which is "
+            "outside data/samples/. Demo mode will not read documents from there. "
+            "Unset INBOX_DIR or DEMO_MODE."
+        )
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        return path.resolve().is_relative_to(root.resolve())
+    except OSError:
+        return False
 
 
 def build_source(settings: Settings) -> object:
@@ -139,8 +263,14 @@ def build_source(settings: Settings) -> object:
 
     A local folder by default. Drive is available and needs a transport and a
     folder id; absent those, the offline path is the one that works.
+
+    In demo mode the folder is the synthetic corpus and nothing else, whatever
+    the inbox setting says. ``enforce_demo_mode`` has already refused any
+    setting that disagrees, so this is the second of two locks.
     """
-    return LocalFolderSource(Path(settings.blob_dir).parent / "inbox")
+    if settings.demo_mode:
+        return LocalFolderSource(DEMO_CORPUS)
+    return LocalFolderSource(inbox_for(settings))
 
 
 def build_sinks(settings: Settings) -> tuple[object, ...]:
@@ -153,8 +283,20 @@ def build_sinks(settings: Settings) -> tuple[object, ...]:
     Google Sheets and Slack are absent unless a transport has been supplied,
     which for this deployment means never: the repository ships offline, and an
     adapter that constructed a real client at startup would make that untrue.
+
+    In demo mode there are no sinks at all. Not disabled, not stubbed: absent,
+    so that nothing in the process holds a handle that could send.
     """
+    if settings.demo_mode:
+        return ()
     return (CsvSink(Path(settings.blob_dir).parent / "deliveries" / "results.csv"),)
+
+
+def build_notifier(settings: Settings) -> object | None:
+    """The console by default; nothing in demo mode, for the reason above."""
+    if settings.demo_mode:
+        return None
+    return ConsoleNotifier()
 
 
 def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> Deps:
@@ -166,6 +308,10 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
     written.
     """
     settings = settings or settings_from_env()
+
+    # Before the database, before anything. A refusal here is the demo mode
+    # guarantee; everything after it is construction.
+    enforce_demo_mode(settings)
 
     db_path = Path(settings.db_path)
     if migrate_db:
@@ -180,6 +326,12 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
     # writes them, so a card written at delivery is visible to the next run.
     calibration = SqliteCalibrationRepository(db_path)
     embedder = LocalEmbedder()
+
+    # One rubric loader, shared by the pipeline and by the stand-in model that
+    # answers when no fixture is recorded, so both read the same criteria.
+    rubric_loader = RubricLoader(_repo_root() / "rubrics")
+    prompts = PromptRegistry.load(_repo_root() / "prompts")
+    llm_cache = SqliteLlmCacheRepository(db_path)
 
     # One redactor, shared by the logs and by anything that stores a person's
     # words about another person. Two would be two policies.
@@ -200,7 +352,7 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         errors=SqliteErrorRepository(db_path),
         deliveries=SqliteDeliveryRepository(db_path),
         calibration=calibration,
-        llm_cache=SqliteLlmCacheRepository(db_path),
+        llm_cache=llm_cache,
         events=SqliteEventRepository(db_path),
         blobs=BlobStore(settings.blob_dir),
         extractor=extractor,
@@ -209,14 +361,14 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
             render_diff_enabled=settings.sanitize_render_diff,
             render_diff_max_pages=settings.render_diff_max_pages,
         ),
-        prompts=PromptRegistry.load(_repo_root() / "prompts"),
+        prompts=prompts,
         router=policy_for(settings.routing_policy_id),
-        rubric_loader=RubricLoader(_repo_root() / "rubrics"),
+        rubric_loader=rubric_loader,
         pricing=load_pricing(_repo_root() / "config" / "pricing.yaml"),
         metrics=SqliteMetricsReader(db_path),
         sinks=build_sinks(settings),
-        notifier=ConsoleNotifier(),
-        models=build_models(settings),
+        notifier=build_notifier(settings),
+        models=build_models(settings, rubric_loader, cache_store=llm_cache, prompts=prompts),
         source=build_source(settings),
         embedder=embedder,
         redactor=redact,

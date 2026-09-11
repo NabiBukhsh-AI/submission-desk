@@ -1,0 +1,26 @@
+Counterfactual fairness
+
+What this measures: the same CV under different identity tokens, and how
+often the answer changed. What it does not measure: whether the system is
+fair. No benchmark of this size can establish that, and every figure below
+sits beside the rate at which re-running an identical document changes its
+own answer.
+
+control: identity held fixed
+  band changed        0.0% [0.0–24.2] (n=12)
+  criterion changed   0.0% [0.0–3.4] (n=108)
+  This is the floor. It is what the arms below are read against, and has nothing to be read against itself.
+
+blind mode off
+  band changed        0.0% [0.0–16.1] (n=20)
+  criterion changed   0.0% [0.0–2.1] (n=180)
+  noise floor (band)  0.0% [0.0–24.2] (n=12)
+  noise floor (crit)  0.0% [0.0–3.4] (n=108)
+  The measured rate and the self-consistency floor overlap at this sample size, so this does not distinguish a disparity from run-to-run variation. It is not evidence of fairness either.
+
+blind mode on
+  band changed        0.0% [0.0–16.1] (n=20)
+  criterion changed   0.0% [0.0–2.1] (n=180)
+  noise floor (band)  0.0% [0.0–24.2] (n=12)
+  noise floor (crit)  0.0% [0.0–3.4] (n=108)
+  The measured rate and the self-consistency floor overlap at this sample size, so this does not distinguish a disparity from run-to-run variation. It is not evidence of fairness either.

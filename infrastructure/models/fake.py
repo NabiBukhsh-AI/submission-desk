@@ -60,8 +60,8 @@ class FakeModelClient:
                 return self.on_missing(request)
             raise ModelUnavailable(
                 f"No recorded response for {request.call_site} at {key[:12]}. "
-                "Record one with `submission-desk fixtures record`, or run against a "
-                "real provider."
+                "Record one under tests/fixtures/llm/ keyed by this value, or run "
+                "against a real provider."
             )
 
         parsed, validation_error = validate_response(raw, request.response_schema)

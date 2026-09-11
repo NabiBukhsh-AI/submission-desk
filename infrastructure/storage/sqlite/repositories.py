@@ -371,6 +371,31 @@ class SqliteRunRepository(SqliteRepository):
                 stale.append(_run_from_row(row))
         return stale
 
+    def list_finished_before(self, cutoff: datetime, limit: int = 500) -> list[RunRecord]:
+        """Finished runs older than the cutoff, oldest first.
+
+        ``finished_at`` rather than ``started_at``: a run that is still open is
+        not old, it is in progress, and retention is about things that ended.
+        """
+        rows = self.connection.execute(
+            """
+            SELECT * FROM runs
+            WHERE finished_at IS NOT NULL AND finished_at < ?
+            ORDER BY finished_at ASC
+            LIMIT ?
+            """,
+            (cutoff.isoformat(), limit),
+        ).fetchall()
+        return [_run_from_row(row) for row in rows]
+
+    def delete(self, run_id: UUID) -> None:
+        """One statement. Every dependent table cascades on the foreign key,
+        which is why the schema declares them and the connection turns
+        ``foreign_keys`` on: a purge that had to remember nine tables would
+        forget the tenth."""
+        with write_transaction(self.connection) as write:
+            write.execute("DELETE FROM runs WHERE run_id = ?", (str(run_id),))
+
 
 def _run_from_row(row: sqlite3.Row) -> RunRecord:
 
@@ -464,6 +489,16 @@ class SqliteCandidateRepository(SqliteRepository):
             )
             for row in rows
         ]
+
+    def sha_referenced(self, document_sha256: str) -> bool:
+        row = self.connection.execute(
+            "SELECT 1 FROM documents WHERE document_sha256 = ? LIMIT 1", (document_sha256,)
+        ).fetchone()
+        return row is not None
+
+    def delete_source_texts(self, document_sha256: str) -> None:
+        with write_transaction(self.connection) as write:
+            write.execute("DELETE FROM source_texts WHERE document_sha256 = ?", (document_sha256,))
 
     def get_source_text(self, document_sha256: str, profile_id: str) -> SourceText | None:
         row = self.connection.execute(

@@ -28,10 +28,17 @@ ALLOWED_PREFIXES = (
     "app",
     "application.deps",
     "application.use_cases",
+    # Startup reconciliation, called once by the command line before anything
+    # else. It moves stalled runs to INTERRUPTED and nothing further.
+    "application.recovery",
     "domain.contracts",
     "domain.ports",
     "domain.security",
     "infrastructure.factory",
+    # The deployment checks. They read adapters (the migration table, the OCR
+    # binary) and return pass/warn/fail with an action; the command renders
+    # them. No check computes anything about a candidate.
+    "infrastructure.doctor",
 )
 
 #: Modules the interface must never import. Each would mean a decision being

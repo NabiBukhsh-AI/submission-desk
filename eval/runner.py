@@ -531,12 +531,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     for name, path in paths.items():
         print(f"  {name}: {path}")
 
-    failures = check_gates(result, load_baseline())
-
     if args.accept:
         save_baseline(result)
         print("  baseline: recorded")
         return 0
+
+    # The gate compares like with like. The baseline is a dev-split run, so a
+    # holdout run is reported and not gated: its cases are different by
+    # design, and a "regression" against a different set of questions would
+    # be a number that meant nothing and a red build somebody learned to
+    # ignore. The holdout is read beside the dev result in EVALUATION.md.
+    if result.split != "dev":
+        print(f"\n  The {result.split} split is not gated. Read it beside the dev result.")
+        return 0
+
+    failures = check_gates(result, load_baseline())
 
     if failures:
         print("\nRegression:")
