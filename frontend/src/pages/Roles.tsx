@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 
 // What a role asks for, editable. The whole rubric is sent to the API and
 // validated there as one thing; nothing is stored until all of it holds.
-// ponytail: state_points are kept as they are (the YAML view shows them); a
+// ceiling: state_points are kept as they are (the YAML view shows them); a
 // points editor if anyone ever needs a criterion worth 0.7 for "partial".
 
 const KINDS: { value: CriterionData['kind']; label: string; help: string }[] = [

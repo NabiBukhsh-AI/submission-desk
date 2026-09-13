@@ -93,7 +93,8 @@ class RoutingRequest:
 
 @dataclass(frozen=True)
 class RoutingThresholds:
-    """From config/routing.yaml. Starting values, swept in Phase 20."""
+    """From config/routing.yaml. Starting values; the sweep that would tune them
+    is `make tune-thresholds` for spans and the routing experiment for the rest."""
 
     max_escalations_per_candidate: int = 3
     token_ceiling_headroom: float = 0.15

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 // A handful of pages and one parameter. The URL hash is the router: deep links work,
 // the back button works, and the browser keeps the history.
-// ponytail: hash routing; a router library if the page count grows past a handful.
+// ceiling: hash routing; a router library if the page count grows past a handful.
 
 export type Route =
   | { page: 'home' }

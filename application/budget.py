@@ -1,7 +1,8 @@
 """The circuit breaker.
 
-A skeleton at this phase: the ceiling is enforced, the real token accounting
-arrives with the model client in Phase 12. What matters now is where it sits.
+The ceiling is enforced here; the token counts it reads come from the model
+client's usage on every call (``application/accounting.py``). What matters
+most is where it sits.
 
 The guard is consulted by the runner *before* a node executes, not by the node
 itself. A node cannot spend money the guard was going to refuse, and a node

@@ -21,6 +21,7 @@ logged with the node's name and converted into the same shape.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -130,7 +131,7 @@ def _execute(node: Node, state: RunState, deps: Deps) -> NodeResult:
                 node=node.name,
                 error_code=getattr(error, "error_code", "UNEXPECTED_ERROR"),
                 error_class=type(error).__name__,
-                message_redacted=_redact(str(error)),
+                message_redacted=_redact(str(error), deps.redactor),
                 retryable=bool(getattr(error, "retryable", False)),
                 attempt=1,
                 resulting_state=node.failure_status,
@@ -139,14 +140,14 @@ def _execute(node: Node, state: RunState, deps: Deps) -> NodeResult:
         )
 
 
-def _redact(message: str) -> str:
-    """Placeholder for the log redactor, which arrives in Phase 16.
+def _redact(message: str, redactor: Callable[[str], str] | None) -> str:
+    """An error message fit to store: through the injected redactor, then bounded.
 
-    Truncation is not redaction, and this does not pretend otherwise. It bounds
-    the damage until the real processor exists, and the limitation is recorded
-    rather than hidden behind a reassuring function name.
+    Truncation alone is not redaction. Without a redactor wired (a bare test
+    container) the message is only bounded, and a stored error may then carry
+    whatever the exception carried; the composition root always wires one.
     """
-    return message[:500]
+    return (redactor(message) if redactor else message)[:500]
 
 
 def _commit_node(

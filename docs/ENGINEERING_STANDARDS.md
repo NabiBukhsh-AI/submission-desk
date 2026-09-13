@@ -82,7 +82,7 @@ There is no `score`, `rank`, `judge`, `decide`, `recommend`, or `compare` call s
 
 ## 4. Repository rules
 
-- Contracts are frozen after Phase 2. Changing one requires: the model change, `make schemas` regenerated and committed in the same commit, every affected test updated, and a line in `docs/DECISIONS/`. Never change a contract silently.
+- Contracts are frozen. Changing one requires: the model change, `make schemas` regenerated and committed in the same commit, every affected test updated, and a line in `docs/DECISIONS/`. Never change a contract silently.
 - Committed JSON Schema files in `contracts/schemas/` must match the models. CI diffs them.
 - Behaviour that a recruiter might reasonably want to change belongs in `rubrics/`, `config/`, or `prompts/`, never in Python.
 - Prompts live in `prompts/**.md` with complete YAML front matter. Do not inline a prompt string in Python.

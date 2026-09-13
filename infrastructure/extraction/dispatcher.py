@@ -5,10 +5,12 @@ MIME type, joins the pages into a single string, and records where each page
 begins and ends so that a character offset can be turned back into "page 2 of
 CV.pdf" for the reviewer.
 
-The offset map produced here is the identity map: raw text and normalised text
-are the same until Phase 9 normalises them and produces a real one. That is
-stated rather than implied, because a wrong offset map is invisible until a
-reviewer clicks a quotation and lands in the wrong paragraph.
+The text returned here is raw, with an identity offset map. The EXTRACT node
+applies the domain's normalisation profile (``domain.provenance.normalization``)
+and produces the real map, page spans and block boundaries; keeping the two
+steps apart is what lets the profile change without a reader changing. A
+wrong offset map is invisible until a reviewer clicks a quotation and lands in
+the wrong paragraph, which is why both halves are tested end to end.
 """
 
 from __future__ import annotations
