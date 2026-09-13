@@ -76,7 +76,13 @@ class ServiceAccount:
         key_json: str = "",
         urlopen: Any = None,
     ) -> None:
-        self.key_path = Path(key_path) if key_path else None
+        raw = str(key_path).strip() if key_path else ""
+        if raw.startswith("{"):
+            # The file's contents pasted where the path was expected. It is
+            # obvious what was meant, so it is accepted rather than reported
+            # as a path that does not exist.
+            key_json, raw = key_json or raw, ""
+        self.key_path = Path(raw) if raw else None
         self.key_json = key_json
         self.scope = scope
         self._urlopen = urlopen or urllib.request.urlopen

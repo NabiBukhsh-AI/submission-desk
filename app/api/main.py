@@ -17,6 +17,7 @@ deployment's: the cookie is marked secure when the request arrived over HTTPS.
 
 from __future__ import annotations
 
+import os
 import sys
 import threading
 from pathlib import Path
@@ -409,6 +410,9 @@ def health() -> dict[str, Any]:
         "demo_mode": settings.demo_mode,
         "reviewer_configured": bool(settings.reviewer_id),
         "provider": settings.model_provider,
+        # Which build answers, so a deployment can be checked against the
+        # commit that was pushed. Render sets RENDER_GIT_COMMIT.
+        "build": os.environ.get("RENDER_GIT_COMMIT", "")[:7],
         # Names only — which adapters are wired, never an id or a token — so
         # the queue can offer "pull from Drive" and "send approved" when they
         # would do something.

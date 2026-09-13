@@ -175,6 +175,16 @@ def test_the_key_can_arrive_as_the_files_contents(key_file: Path) -> None:
     assert account.email == "desk@example-project.iam.gserviceaccount.com"
 
 
+def test_the_contents_pasted_as_the_path_are_taken_as_the_key(key_file: Path) -> None:
+    """The likeliest mistake on a dashboard: the JSON goes into the variable
+    that wanted a path. It is unmistakable, so it is accepted."""
+    http = _Http((200, {"access_token": "ya29.pasted", "expires_in": 3600}))
+    account = google_auth.ServiceAccount(key_file.read_text(), "scope", urlopen=http)
+
+    assert account.key_path is None
+    assert account.token(now=0) == "ya29.pasted"
+
+
 def test_pasted_json_that_is_not_json_says_so() -> None:
     account = google_auth.ServiceAccount("", "scope", key_json="{not json", urlopen=_Http())
 
