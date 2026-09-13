@@ -275,7 +275,7 @@ export function Decision({
             <Alert>
               <AlertTitle>No reviewer is configured.</AlertTitle>
               <AlertDescription>
-                Decisions have to be attributed to somebody. Set REVIEWER_ID where the API runs.
+                Decisions have to be attributed to somebody. Set the reviewer id on the Settings page.
               </AlertDescription>
             </Alert>
           )}

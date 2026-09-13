@@ -55,8 +55,15 @@ export default function App() {
       else setOffline(true)
     }
     api.vocabulary().then(setVocabulary).catch(signedOut)
-    api.health().then(setHealth).catch(signedOut)
   }, [user])
+
+  // Health — demo mode, provider, whether a reviewer is set — is read again on
+  // every page change, so what was saved on the Settings page is in force on
+  // the next page without a reload.
+  useEffect(() => {
+    if (!user) return
+    api.health().then(setHealth).catch(() => undefined)
+  }, [user, route.page])
 
   const signOut = async () => {
     await api.auth.logout().catch(() => undefined)

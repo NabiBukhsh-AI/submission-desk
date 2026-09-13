@@ -67,17 +67,20 @@ def find_gaps(rubric: RoleRubric, recommendation: Recommendation) -> list[Gap]:
     Deterministic, and in rubric order so the recruiter's list reads the way
     their rubric does. A model is never asked which points these are.
     """
-    by_id = {criterion.id: criterion for criterion in rubric.criteria}
+    states = recommendation.criterion_states
 
+    # Walk the rubric, not the states: the states arrive in the order the
+    # parallel assessments finished, which would reorder the list from run
+    # to run and make an otherwise identical prompt miss the response cache.
     return [
         Gap(
-            criterion_id=criterion_id,
-            label=by_id[criterion_id].label,
-            question=by_id[criterion_id].question,
-            state=state,
+            criterion_id=criterion.id,
+            label=criterion.label,
+            question=criterion.question,
+            state=states[criterion.id],
         )
-        for criterion_id, state in recommendation.criterion_states.items()
-        if state in UNRESOLVED_STATES and criterion_id in by_id
+        for criterion in rubric.criteria
+        if criterion.id in states and states[criterion.id] in UNRESOLVED_STATES
     ]
 
 
