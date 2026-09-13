@@ -40,11 +40,12 @@ is on every run record.
 
 ## Trade-offs
 
-Adding a provider means writing a transport: a known, bounded cost. The
-transport for a specific vendor is not in the repository, because its request
-shape is the vendor's and a guess at it would name a vendor in code that knows
-only about tiers. Until one is wired, `MODEL_PROVIDER=live` fails the doctor
-and refuses at the first call with a sentence saying so.
+Adding a provider means writing a transport: a known, bounded cost, one file
+under `infrastructure/models/transports/`. One is wired — Anthropic, through
+its SDK, streamed, with structured output — and the vendor's name appears
+there and in the settings that bind a tier to a model, nowhere else. A
+provider named in settings with no key fails the doctor and refuses at the
+first call with a sentence saying so.
 
 ## Consequences
 

@@ -13,8 +13,8 @@ behind it, and you decide. Nothing is sent to a candidate until you approve it.
 ## What it will not do
 
 It will not tell you someone is a good fit. It will tell you what their
-documents say about nine specific points, and what a fixed set of rules makes of
-that.
+documents say about the role's requirements, and what a fixed set of rules
+makes of that.
 
 It will not guess. If a CV never mentions evaluation work, the system says the
 CV never mentioned it — not that the candidate cannot do it, and not that they
@@ -26,26 +26,25 @@ any of those anywhere in this system, that is a bug worth reporting immediately.
 
 ## Getting started
 
-    make demo
+Open the address you were given (locally, http://localhost:5173 after
+`make api` and `make web`). The first person to open a fresh installation is
+asked to create the admin account: any username, a password of at least ten
+characters. After that the same form signs in. Sessions last a working day.
 
-Then open the address it prints.
+It works on a phone: the navigation moves to the bottom of the screen.
 
-## The four pages
+## The pages
 
-### Upload
+### Home
 
-Drag in CVs and supporting documents. The system guesses which files belong to
-the same person and shows you the grouping so you can correct it — filenames are
-how people name things, not how systems identify them, and it will sometimes get
-this wrong.
-
-Limits are shown before you upload rather than after: 20 MB per file, six
-documents per candidate.
+What the system does and what it defends against, in one page. Public; no
+sign-in needed to read it.
 
 ### Queue
 
-Everything that has been processed. It opens on **Needs attention**, which is
-the candidates waiting on you. The other filters are there when you want them.
+Everything that has been processed, by what is waiting on you. It opens on
+**Needs attention**. The other filters — waiting on a candidate, decided, in
+progress, everything — are there when you want them.
 
 The chips mean:
 
@@ -58,23 +57,57 @@ The chips mean:
 | ⚠️ Could not finish | A step failed. The documents are still there to read. |
 | 👍 / 👎 | You have decided. |
 
+Tick candidates to act on several at once: **Run on this role** sends their
+stored documents through again against another role (nothing is uploaded
+twice; the same documents on the same role are recognised, not repeated), and
+**Delete** removes the runs and any document nothing else uses. The four
+sample candidates that ship with the system are marked *sample* and cannot be
+deleted.
+
+### Upload
+
+Choose the role, then the files: PDF, Word or plain text, up to 25 MB and eight
+documents per candidate. The system guesses which files belong to the same
+person and shows you the grouping so you can correct it — filenames are how
+people name things, not how systems identify them, and it will sometimes get
+this wrong. Progress shows in the queue; a candidate takes about half a minute.
+
 ### Review
 
-The page is ordered by the questions you will actually ask.
+The page is ordered by the questions you will actually ask, and every word on
+it is defined — hover a term, or open **What every word on this page means** at
+the bottom.
 
 **Can I trust these documents?** The banner at the top. Green means nothing was
 found. Amber means something was flagged and the assessment continued anyway.
 Red means a document contained content designed to manipulate an automated
 reader — the flagged text is quoted in full so you can see exactly what it was.
 
-**What does it recommend, and why?** The band, then every rule that fired, in
-plain sentences. If it says "not enough information", that is not a low score.
-It means the documents did not cover enough of the role to judge, and the
-questions further down say what to ask for.
+**What is the outcome, and why?** The band with what it means, then seven
+facts with their definitions: coverage against this role's gate, the score (or
+the provisional score when a band was withheld), requirements assessed,
+quotations verified and excluded, what the run cost, and how many repairs and
+escalations it took. If it says **Not enough information**, that is not a low
+score: the documents covered less of the role than the gate requires, and the
+questions further down say what to ask for. If it says **Check with the
+candidate first**, a requirement that decides the outcome on its own — work
+authorisation, typically — was not answered either way, and the system will
+not decline on silence.
 
-**What did it read?** Each point, expandable, with the quotations behind it.
-"Show me where" puts the quotation back in its surrounding paragraph so you can
-see whether it was quoted fairly.
+**Why does this need a person?** Each reason, with what it means and what to
+do about it. None of them change the band.
+
+**How was this worked out?** Every rule that fired, in order, with its inputs
+and what it produced. Nothing in it came from a model; the band can be traced
+by hand.
+
+**Point by point.** A table of every requirement: its kind (standard,
+high-stakes, blocker), its weight, the quotations found against the number
+needed, its state, and whether it counted toward coverage.
+
+**What did it read?** Each requirement, expandable, with the quotations behind
+it, how each quotation was checked, and **Show me where**, which puts the
+quotation back in its surrounding paragraph on the page it came from.
 
 **What did it throw away?** The excluded panel. These are quotations the system
 could not find in the source document — the system checking its own work and
@@ -114,23 +147,32 @@ stays open.
 The trust slider is not a formality. It is one of the two numbers used to work
 out whether this system is worth keeping.
 
-### Rubric
+### Roles
 
-What the role asks for: the points, their weights, how many quotations each one
-needs, and where the bands fall.
+What each role asks for: every requirement with its question, its kind, its
+weight, the number of quotations it needs and its examples; the coverage gate;
+the bands. Edit any of it, add or remove a requirement, duplicate a role as the
+start of a new one, or reset to the shipped version.
 
-Editing this changes how every candidate is scored from now on. Nothing saves
-until it validates, and you see exactly what changes before it is written.
-Candidates already reviewed keep the rubric they were scored under.
+Nothing saves until the whole role validates, and the change is in force on the
+next run. Candidates already reviewed keep the version they were scored under;
+the page shows the hash of the version in use.
 
-Two fields people get wrong:
+Two settings people get wrong:
 
-**`min_supported`** — how many separate quotations a point needs before it
+**Quotations needed** — how many separate quotations a point needs before it
 counts as met. Raise it to make the system harder to convince.
 
-**`min_coverage`** — how much of the rubric has to be assessable before a score
-is reported at all. Below it, the system says it does not know enough rather
-than guessing low.
+**Coverage gate** — how much of the role has to be assessable before a score is
+reported at all. Below it, the system says it does not know enough rather than
+guessing low. Seventy percent is strict for one-page CVs; that is a choice.
+
+### Settings
+
+The model provider and its key (shown as set or not, never the value), the
+model and price per tier, the reviewer id that decisions are attributed to,
+blind mode, and retention. **Test the connection** makes one tiny call per
+tier and says what it cost.
 
 ## If something looks wrong
 

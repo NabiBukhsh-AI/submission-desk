@@ -166,7 +166,7 @@ Each of these is a specific, tempting, wrong thing. None of them is acceptable.
 - Committing a real CV, a real name, an email address, or a `.env`.
 - Hardcoding an API key, even temporarily, even in a test.
 - Adding a vector database, a message queue, a container orchestrator, or a microservice.
-- Replacing Streamlit with a React frontend.
+- Adding a third interface, or business logic to either of the two.
 - Replacing SQLite with PostgreSQL.
 - Adding an observability platform (OTel collector, tracing SaaS, LLM-ops vendor).
 - Putting business logic in `app/`.
@@ -233,7 +233,7 @@ A change is complete only when **all** of the following hold. "The code works" i
 ```bash
 make setup           # venv, deps, the submission-desk command
 make seed            # synthetic corpus, assessed offline in demo mode
-make demo            # the reviewer interface, demo mode on, no API key
+make api             # the HTTP API, demo mode on, no API key; make web for the interface
 make run             # the interface without demo mode, for a pilot
 make doctor          # every deployment check, with an action per line
 make smoke           # seed, then assert a reviewable candidate (CI)

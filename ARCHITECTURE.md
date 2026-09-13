@@ -31,7 +31,8 @@ one you have.
     application     use cases, the runner, Deps, the budget guard, cost accounting.
     pipeline        the eleven nodes. One signature: (RunState, Deps) -> NodeResult.
     infrastructure  every adapter: SQLite, blobs, extraction, security, models, integrations.
-    app             Streamlit pages, the HTTP API, and the command line. Rendering and parsing only.
+    app             the HTTP API, the command line, and the earlier Streamlit page. Rendering and parsing only.
+    frontend        the React client over the API. Renders what it returns; every sentence from /api/vocabulary.
     eval            the harness, the arms, the fairness experiment.
 
 Dependencies point inward. `domain` imports nothing above it; `application` and
@@ -49,9 +50,10 @@ times with a written justification in the test file, and the other dozen
 violations were fixed by moving code to where it belonged or introducing a
 port.
 
-A second architecture test, `test_no_business_logic_in_app.py`, asserts that no
-Streamlit page imports the rule engine, calls a transition, or names a
-threshold. The interface renders what a use case returns.
+A second architecture test, `test_no_business_logic_in_app.py`, asserts that
+nothing under `app/` — the API routes or the Streamlit page — imports the
+rule engine, calls a transition, or names a threshold. The interface renders
+what a use case returns.
 
 ## 3. The pipeline
 
@@ -199,11 +201,14 @@ naive single-call comparison, and is deliberately not in the system's registry.
 A call to an undeclared site raises.
 
 Two tiers, `tier_cheap` and `tier_strong`, named by cost class. The binding to
-a provider's model identifier lives in `config/models.yaml` or the environment
-and nowhere else: not in code, not in logs, not in a chart label, not in this
-document. Swapping a model is an edit in one place, and the binding hash is on
-every run record so a swap is visible in the evaluation rather than silently
-changing results.
+a provider's model identifier lives on the Settings page, in the environment,
+or in `config/models.yaml`, in that order, and nowhere in code: not in logs,
+not in a chart label, not in this document. Swapping a model is an edit in
+one place, and the binding hash is on every run record so a swap is visible
+in the evaluation rather than silently changing results. The provider is
+Anthropic through its SDK, with structured output and streamed responses; a
+key saved on the Settings page is sealed at rest and opened only in the
+composition root.
 
 The client is a protocol with one method, `structured_generate`, wrapped by
 decorators that each do one thing: one schema repair at the same tier, never
@@ -216,8 +221,9 @@ Three routing policies over the same interface — all cheap, all strong, and
 routed. The routed policy escalates on mechanical evidence (an invalid span)
 before self-reported confidence, starts high-stakes criteria strong, and caps
 escalations per candidate and per budget. The experiment that would justify it
-is wired and has run; the cost column reads *not measured* because no provider
-is priced.
+is wired and has run against the stand-in, where the three arms tie; against
+the model it has not been run, and the claim that routing saves money is
+unsupported until it is (`LIMITATIONS.md`).
 
 The offline client replays recorded fixtures and, for a request with no
 fixture, hands over to a deterministic stand-in that quotes the document or
@@ -254,23 +260,35 @@ credentials and `.env` files — run in the hook and again in `make check`.
 
 ## 10. Review
 
-Two interfaces, one rule. Streamlit was the first, chosen because the
-deliverable is a working workflow rather than a front end, with a hard rule
-that `app/` holds no business logic. The second is a thin HTTP API
-(`app/api/main.py`, one use case call per route) and a React client under
-`frontend/` that renders what it returns. The words both interfaces show —
-chips, bands, states, reasons, detector names — come from one module,
-`app/vocabulary.py`, served to the client as `/api/vocabulary`, so neither
-can invent a gentler banner. The same architecture test walks both.
+Two interfaces, one rule: `app/` holds no business logic. The one a reviewer
+is pointed at is a thin HTTP API (`app/api/main.py`, one use case call per
+route) and a React client under `frontend/` that renders what it returns —
+home, sign in, queue, review, upload, roles, settings, usable on a phone. The
+Streamlit page came first and stays for one person on one machine. The words
+both show — chips, bands, states, reasons, detector names, and every
+definition on the review page — come from one module, `app/vocabulary.py`,
+served as `/api/vocabulary`, so neither can invent a gentler banner. The same
+architecture test walks both.
 
 The review page is ordered by the questions a recruiter asks: can I trust these
-documents (the integrity banner); what does it recommend and why (the band and
-the derivation, in sentences); what did it read (evidence per criterion, with
-click-through to the source); what did it throw away (the rejected-span panel);
-what should I ask next. A reviewer who disagrees changes a criterion state, not
+documents (the integrity banner); what does it recommend and why (the outcome
+with its definition, coverage against the role's gate, the score, each reason
+a person is needed with what it means and what to do, and the derivation rule
+by rule with inputs and outputs); what did it read (evidence per requirement,
+each with its kind, weight, quotations found against needed, and click-through
+to the page); what did it throw away (the excluded-quotation panel); what
+should I ask next. A reviewer who disagrees changes a requirement's state, not
 a score, and says why from a taxonomy whose values each route somewhere — a
 prompt, the rubric, or a documented limit. The recommendation is recomputed
 through the rule engine before they commit.
+
+Around the review: one admin account (scrypt-hashed password, signed session
+cookie) guards every route past health; the Settings page holds the provider,
+its key (sealed at rest, never returned), the model and price per tier; the
+Roles page shows each rubric as configured and lets it be edited, validated
+whole, and stored over the shipped file; the queue can run stored candidates
+against another role from the blob store, or delete a run and the documents
+nothing else uses — never a sample candidate, recognised by content hash.
 
 Decisions are attributed to a configured reviewer id, never to a name typed in
 a box. Elapsed time and a trust rating are recorded on every decision because
@@ -315,14 +333,17 @@ another run still refers to them; dry run by default.
 
 ## 13. Observability and cost
 
-Structured logs through one processor chain, to a JSONL file and to SQLite so
-the operations page is a query. Every run record carries its token totals, its
-call count, its retries, repairs, escalations, validation failures and
-invalid-span count, and every model call writes a cost row.
+Structured logs through one processor chain — the redactor first — to a
+JSONL file, and to the terminal as one line per node and per model call
+(`make api`, `make api-live`): tier, model, tokens, latency, and what failed
+validation. Every run record carries its token totals, its call count, its
+retries, repairs, escalations, validation failures and invalid-span count, and
+every model call writes a cost row.
 
-Prices are configuration and ship empty. A cost with no rate is `None`, renders
-as "not configured", and is never zero — a test forbids price literals in
-source and another asserts that an unpriced call does not produce a number.
+Prices are configuration — entered per tier on the Settings page, or in
+`config/pricing.yaml`, which ships empty. A cost with no rate is `None`,
+renders as "not configured", and is never zero — a test forbids price literals
+in source and another asserts that an unpriced call does not produce a number.
 The token ceiling works as a circuit breaker whether or not pricing is set.
 
 `submission-desk doctor` is the deployment's observability: database,
@@ -336,8 +357,10 @@ Three arms: A, a recruiter's own timed decisions (not recorded, so reported as
 absent); B, one naive call that asks for a band and a justification; C, the
 system. Twelve cases split eight/four into dev and holdout before any tuning,
 most of them asserting abstention rather than a band because any system can be
-graded on a strong candidate. A regression gate compares each dev run to a
-pinned baseline and names the cases that changed answer.
+graded on a strong candidate. A regression gate compares each dev run, against
+the deterministic stand-in, to a pinned baseline and names the cases that
+changed answer. `make eval-baseline` runs B and C on the real model, same
+cases, same prices, and is where the numbers about the model come from.
 
 Every proportion carries its n and a Wilson interval, and the report raises
 rather than prints a figure that has no denominator. The fairness harness
@@ -356,7 +379,7 @@ and nothing else; there are no sinks and no notifier — absent, not disabled �
 so nothing in the process holds a handle that could send. DELIVER says so
 rather than reporting a failure, and the retry path refuses rather than marking
 a run delivered that was never sent. The upload page is switched off. This is
-what `make demo` runs.
+what `make api` and `make demo` run.
 
 ## 16. Reading the code
 

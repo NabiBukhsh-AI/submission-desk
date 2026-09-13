@@ -7,9 +7,9 @@ assumes the ones before it.
 | | Decision | Where it lives |
 |---|---|---|
 | [ADR-001](ADR-001-static-pipeline-not-agent-framework.md) | A static pipeline of plain functions, not an agent framework | `pipeline/`, `application/runner.py` |
-| [ADR-002](ADR-002-streamlit-with-no-business-logic.md) | Streamlit for the interface, with no business logic in it | `app/` |
+| [ADR-002](ADR-002-streamlit-with-no-business-logic.md) | An interface with no business logic in it — Streamlit first, then React over an HTTP API (amended) | `app/`, `frontend/` |
 | [ADR-003](ADR-003-sqlite-and-a-blob-store.md) | SQLite plus a content-addressed blob store | `infrastructure/storage/` |
-| [ADR-004](ADR-004-thin-model-client-not-a-framework.md) | A thin model client with composable decorators | `infrastructure/models/` |
+| [ADR-004](ADR-004-thin-model-client-not-a-framework.md) | A thin model client with composable decorators (amended: the repair resends the document) | `infrastructure/models/` |
 | [ADR-005](ADR-005-evidence-first-extraction.md) | Evidence first, never score first | `domain/provenance/`, `pipeline/assess.py` |
 | [ADR-006](ADR-006-deterministic-scoring.md) | Two pure functions turn evidence into a recommendation | `domain/rules/` |
 | [ADR-007](ADR-007-calibration-retrieval-off-by-default.md) | Retrieval only for calibration, and off until it earns its place | `pipeline/calibrate.py` |

@@ -47,3 +47,14 @@ walks every page's imports and names. The one widening made during the build
 — the command line may import the deployment checks and startup reconciliation
 — is recorded in the test with its reason. A refresh loses nothing, because
 nothing that matters lives in the page.
+
+## Amendment, 2026-09-13
+
+A second interface — React over a thin HTTP API in `app/api/` — joined the
+Streamlit page and became the one a reviewer is pointed at: it has the admin
+account, the roles editor, the run-again and delete actions, a phone layout,
+and every word on the review page defined. The rule did not change: the API
+layer is one use-case call per route, the React client renders what the API
+returns and takes every sentence from `/api/vocabulary`, and the same
+architecture test walks both interfaces. Streamlit stays for one person on
+one machine, with no login.

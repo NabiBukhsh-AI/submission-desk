@@ -45,9 +45,10 @@ cost column is empty in both directions.
 ## Consequences
 
 The routing experiment is wired to produce the cost table the decision was
-made for, and it ran: three policies, identical figures, no cost, because no
-provider is priced and the stand-in never gives the routed policy a reason to
-escalate. The row reads *not measured*, which is the honest state of the claim
-and is written in EVALUATION.md and the README in those words. Every cost
-claim, when there is one, will carry its n and the hash of the pricing file
-that produced it.
+made for, and it ran against the stand-in: three policies, identical figures,
+because the stand-in never gives the routed policy a reason to escalate; it
+has not been run against the model, and EVALUATION.md and the README say so.
+What has been measured is one configuration on the model — Haiku on both
+tiers, priced from the Settings page, 2.3 cents a candidate on the
+benchmark, against 0.12 cents for one naive call — and every such figure
+carries its n and the source of the prices that produced it.

@@ -6,16 +6,21 @@ with what to do when it does not work.
 
 ## 1. Setup
 
-Requirements: Python 3.11 and `make`. On Windows, PowerShell and Git Bash
-both work for every target except `make clean`, which uses `rm` and `find`.
-Tesseract is optional and only needed for scanned documents.
+Requirements: Python 3.11, Node 20+ and `make`. On Windows, PowerShell and
+Git Bash both work for every target except `make clean`, which uses `rm` and
+`find`. Tesseract is optional and only needed for scanned documents.
 
     git clone <repository> submission-desk
     cd submission-desk
     make setup          # .venv, dependencies, the submission-desk command
     make seed           # synthetic candidates, assessed offline
     make doctor         # says what is and is not configured
-    make demo           # the reviewer interface, demo mode on
+    make api            # the HTTP API on :8000, demo mode on
+    make web            # in a second terminal: the interface on :5173
+
+Open http://localhost:5173. The first visit creates the one admin account
+(any username, a password of at least ten characters); after that the same
+form signs in. The queue shows the four synthetic candidates.
 
 `make setup` creates `.venv/` and installs the project in editable mode, which
 registers the `submission-desk` command inside it. Activate the environment
@@ -26,21 +31,19 @@ directly; every Makefile target already uses the venv's interpreter.
 the type checker, and the offline test suite. It takes a few minutes and needs
 no network.
 
-The React interface (optional; the Streamlit one needs nothing more):
+`make web` runs `npm install` on first use. `make api` is demo mode: only the
+synthetic corpus is read, uploads are switched off, nothing can be delivered.
+`make api-live` starts the API on real documents (section 3). Both print one
+line per node and per model call as they run (section 5).
 
-    make api            # the HTTP API on :8000, demo mode on
-    make web            # Vite dev server on :5173, proxying /api to the API
+The earlier interface, `make demo`, is a Streamlit page over the same use
+cases. It has no login and stays for one person on one machine.
 
-Node 20+ is required for `make web`; `npm install` runs on first use. Without
-demo mode, run the API as `submission-desk api` with your `.env` in place. For
-a static deployment, `cd frontend && npm run build` produces `frontend/dist/`,
-and `VITE_API_BASE=https://your-api.example` at build time points it at the
-API. The API has no authentication; see section 7.
-
-Docker, for parity only:
+One container for the whole thing — the API, the built interface served from
+the same origin, and Tesseract — is section 6a:
 
     docker build -t submission-desk .
-    docker run --rm -p 8501:8501 submission-desk
+    docker run --rm -p 8000:8000 -e APP_SECRET=change-me submission-desk
 
 ## 2. Configuration
 
@@ -180,9 +183,9 @@ line is `[ ok ]`, `[warn]` or `[fail]` with an action; a failure exits 1.
 | migrations | the database is *ahead* of the code | Somebody ran a newer revision against this file. Check out that revision, or move the file aside and start fresh. Do not downgrade in place. |
 | prompts | `prompts/` is missing or empty | Restore it from version control. The registry refuses to start without every declared prompt. |
 | rubrics | no YAML under `rubrics/`, or one does not validate | `make rubric-lint` names the field. Nothing can be assessed without a valid rubric. |
-| model provider | `fake` | A warning, not a failure: the demo and the suite run this way. Set `MODEL_PROVIDER=live` for real candidates. |
-| model provider | `live` with no transport wired | Section 6. The system will refuse at the first call until one is. |
-| pricing | `config/pricing.yaml` has no rates | A warning. Every cost reads "not configured" until rates are entered; token counts are recorded regardless. |
+| model provider | `fake` | A warning, not a failure: the demo and the suite run this way. Choose Anthropic on the Settings page (or set `MODEL_PROVIDER=anthropic`) for real candidates. |
+| model provider | `anthropic` with no key | A failure. Save the key on the Settings page, or set `MODEL_API_KEY`; until then the stand-in answers every call. |
+| pricing | no rates on the Settings page or in `config/pricing.yaml` | A warning. Every cost reads "not configured" until rates are entered; token counts are recorded regardless. |
 | OCR | Tesseract is not on `PATH` | Scanned documents will be refused rather than read. Install it, or set `TESSERACT_BINARY`. Plain-text and digital PDFs are unaffected. |
 | document source | the folder does not exist yet | Uploading creates it. `make seed` creates the synthetic one. |
 | disk space | under 500 MB free where documents are stored | A failure. Free space before processing anything: intake refuses on a full disk rather than corrupting a document, and 500 MB is the margin before that happens. |
@@ -337,9 +340,9 @@ email, no phone number, no quotation unless `LOG_SPANS` is on, and never a
 credential. Real documents belong outside the repository at `PILOT_DATA_DIR`
 and are removed by `purge` after `RETENTION_DAYS`.
 
-There is no authentication on the interface. Run it on one machine for one
-reviewer, or put an identity layer in front of it. See
-[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+The HTTP interface is behind the one admin account (section 2); the
+Streamlit page has no login and is for one person on one machine. What is
+and is not defended against is in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
 ## 8. Evaluation
 
@@ -348,6 +351,7 @@ reviewer, or put an identity layer in front of it. See
     make eval-routing       # three routing policies
     make eval-calibration   # calibration off and on
     make eval-fairness      # counterfactual pairs, with the control arm
+    make eval-baseline      # the naive one-call baseline against the pipeline, on the real model
     make eval-accept        # pin the current dev result as the baseline
     make tune-thresholds    # the span-threshold sweep
 

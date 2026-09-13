@@ -7,16 +7,18 @@ proportion without its denominator is the easiest way to mislead somebody
 honestly, and at this scale — twelve benchmark cases, twenty fairness pairs — the
 denominator is the most important part of every claim.
 
-Nothing here is a claim about a model. The offline harness runs against a
-deterministic stand-in, so these figures measure the pipeline: span validation,
-the rule engine, the coverage gate, abstention, and the integrity path. Point
-`MODEL_PROVIDER` at a real provider and the same harness measures the model
-instead.
+Two kinds of figure, kept apart. The offline harness runs against a
+deterministic stand-in, so its figures measure the pipeline — span validation,
+the rule engine, the coverage gate, abstention, the integrity path — and are
+what the regression gate protects. The comparison in the section "Against a
+real model" runs the same cases on Claude Haiku 4.5, beside a naive one-call
+baseline, and is the only place a number is a claim about a model.
 
 ## Running it
 
-    make eval             # the dev split, with the regression gate
-    make eval-holdout     # the held-out split, once, at the end
+    make eval             # the dev split, with the regression gate (stand-in)
+    make eval-holdout     # the held-out split, once, at the end (stand-in)
+    make eval-baseline    # the naive one-call baseline against the pipeline, on the real model
     make eval-routing     # three routing policies over the same cases
     make eval-calibration # with and without calibration
     make eval-fairness    # counterfactual pairs, with the noise floor

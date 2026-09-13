@@ -11,8 +11,8 @@ import { useRoles } from '@/lib/roles'
 import { navigate } from '@/lib/router'
 
 // Stated before choosing files, and read from the same limits intake applies.
-const MAX_FILE_MB = 20
-const MAX_DOCUMENTS_PER_CANDIDATE = 6
+const MAX_FILE_MB = 25
+const MAX_DOCUMENTS_PER_CANDIDATE = 8
 const ACCEPT = '.pdf,.docx,.txt,.md'
 
 // Which candidate a file probably belongs to. Deliberately simple, and shown

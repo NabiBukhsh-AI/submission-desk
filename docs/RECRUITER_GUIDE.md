@@ -31,10 +31,13 @@ unusual. Amber: something worth a look, and it says what. Red: the document
 contained text written to trick an automated reader. You see the exact text.
 Nothing was assessed, and it is your call.
 
-**What does it think, and why?** The recommendation, then the reasons, in
+**What does it think, and why?** The outcome with what it means, the reasons
+a person is needed with what to do about each, then every rule that fired, in
 sentences. "Not enough information" is not a bad mark. It means the documents
 did not cover enough of the role to judge, and the questions further down say
-what to ask for.
+what to ask for. "Check with the candidate first" means one requirement that
+decides on its own — usually work authorisation — was not answered either way.
+Every word on the page is defined at the bottom of it.
 
 **Where did it get that?** Every point expands to show the quotations behind
 it. "Show me where" puts a quotation back into its paragraph. A separate
@@ -62,9 +65,11 @@ decide whether this system is worth keeping.
 
 ## Three things to know
 
-The requirements for the role are a file you can read and change. Changing
-them changes how every future candidate is assessed; candidates already
-reviewed keep the version they were reviewed under.
+The requirements for the role are on the **Roles** page, where you can read
+and change them. Changing them changes how every future candidate is
+assessed; candidates already reviewed keep the version they were reviewed
+under. Ticking candidates in the queue lets you run them against another
+role without uploading again.
 
 If two people open the same candidate and both decide, the second is asked to
 reload and read the first decision before making theirs.

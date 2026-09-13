@@ -20,22 +20,29 @@ because there was no pilot. The mechanism is still built: elapsed seconds and
 a trust rating are recorded on every decision, so the first real week of use
 produces the numbers this document lacks.
 
-**No model was measured.** Every figure in the evaluation comes from a
-deterministic stand-in that quotes the document literally. The numbers say
-whether the pipeline does the right thing with evidence; they say nothing about
-whether a language model finds the right evidence, paraphrases correctly, or
-resists an instruction that the deterministic detectors miss. Point
-`MODEL_PROVIDER` at a real provider and the dev and holdout suites measure the
-model. The fairness harness does not: it is wired to the stand-in on purpose,
-so that a flip is the system changing its mind rather than a model sampling
-differently, and measuring a model there means wiring the provider client with
-the response cache off. That is a code change, not a flag.
+**One model, measured twice, on twelve cases.** The dev and holdout suites
+were run against Claude Haiku 4.5 on one day, before and after one fix, with
+the naive one-call baseline beside them (`docs/EVALUATION.md`). That is the
+whole of what is known about a model's behaviour here. It is not known how
+Sonnet or Opus would do, whether the same model does the same thing next
+month, or what happens on a hundred real CVs: the two runs already differed
+on hallucination (4 of 107 against 0 of 103) on identical inputs. The
+regression gate still runs against the deterministic stand-in, on purpose,
+so that a gate failure means the pipeline changed and not that the model
+sampled differently.
 
-**No cost in money.** Prices ship empty. The routing experiment that would
-justify the routed policy ran and produced identical numbers in all three arms,
-because the stand-in never gives it a reason to escalate. The cost column reads
-*not measured*, and the claim that routing saves money is unsupported until a
-provider is priced.
+**The fairness harness has not seen a model.** It is wired to the stand-in,
+so that a flip is the system changing its mind rather than a model sampling
+differently. Measuring a model there means running the provider client with
+the response cache off, which is a code change, not a flag, and has not been
+made.
+
+**Cost is measured for one configuration.** Haiku on both tiers, $1 / $5 per
+million tokens, 2.3 cents a candidate on the benchmark. The routing
+experiment — cheap, strong, routed — has only run against the stand-in, where
+the three arms are identical because nothing ever escalates; the claim that
+routing saves money over all-strong is unsupported until it is run against
+the model.
 
 **Calibration.** Implemented, ablated, and the ablation showed nothing over an
 index that was empty. It ships off. A further limit: a calibration card written
@@ -51,10 +58,12 @@ annotator figure to say how much of the disagreement is the system's.
 
 ## The benchmark is small and the corpus is synthetic
 
-Twelve cases. Two of them assert a band, so band accuracy has n=2 and its
-interval is nine to ninety percent. That is not a defect in the arithmetic; it
-is the honest width of a claim on two observations, and the reason most cases
-were written to assert abstention or quarantine instead.
+Twelve cases. Three of them assert a band, so band accuracy has n=3 and its
+interval on two correct is twenty-one to ninety-four percent. That is not a
+defect in the arithmetic; it is the honest width of a claim on three
+observations, and the reason most cases were written to assert abstention or
+quarantine instead. The one real document the system has seen — the author's
+own CV — is one document.
 
 Every document in the repository is invented. Synthetic CVs are cleaner than
 real ones — consistent dates, one column, no headers repeated on every page, no
@@ -149,7 +158,8 @@ logs by default for that reason, and switching them on is a deliberate act.
 
 ## Operational limits
 
-**No authentication.** The interface has no login. Anybody who can reach the
+**One account, no roles.** The HTTP interface has one admin login and no
+lockout; the Streamlit page has no login. Anybody who can reach the
 port can review, approve, and read every candidate. Decisions are attributed
 to a configured reviewer id, not to a verified person. This is acceptable for
 one recruiter on one machine and for nothing else; a hosted deployment needs
@@ -165,11 +175,17 @@ to be revisited.
 are processed sequentially; criteria within a candidate in parallel. Tens of
 candidates an hour, not thousands.
 
-**No provider transport ships.** The live client is built and its failure
-paths are tested against a scripted transport, but the function that performs
-the HTTP call to a specific vendor is deployment configuration and is not in
-the repository. Setting `MODEL_PROVIDER=live` without wiring one fails the
-doctor and refuses at the first call, with a sentence saying so.
+**One provider.** Anthropic, through its SDK. A second provider is one
+file (`RUNBOOK.md`, section 6) and none is wired. Two free OpenRouter models
+were tried and removed: reasoning tokens consumed the output budget, one
+refused JSON schemas, and both marked requirements supported without quoting
+anything. The provider is a settings-page choice, not a code change, but the
+choice today is one.
+
+**The free hosting tier forgets.** On Render's free plan the filesystem is
+wiped on every deploy: the database, the uploaded documents and the saved
+key start over. Persistent storage is a paid plan and a one-line change in
+`render.yaml`.
 
 **No fixture recording tool.** Recorded responses are replayed if present under
 `tests/fixtures/llm/`; there is no command that records them from a live run.
@@ -184,7 +200,7 @@ it on a schedule.
 ## What would change these
 
 In rough order of value: a recruiter session, which produces the baseline, the
-labels, and the productivity number in one afternoon; a second labeller; a
-priced provider, which turns three "not measured" rows into numbers in one
-run; and real documents in a private pilot, which is the only way to learn how
+labels, and the productivity number in one afternoon; a second labeller; the
+routing and fairness experiments against the model, which are wired and
+unrun; and real documents in a private pilot, which is the only way to learn how
 much the synthetic corpus flattered extraction.
