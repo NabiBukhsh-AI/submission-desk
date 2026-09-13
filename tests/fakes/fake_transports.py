@@ -104,9 +104,17 @@ class FakeSheets:
         self.rows.extend(rows)
         return f"Sheet1!A{start}:L{len(self.rows)}"
 
+    def format_sheet(self, spreadsheet_id: str, widths: tuple[int, ...]) -> None:
+        self.calls.append("format")
+
     @property
     def append_count(self) -> int:
         return self.calls.count("append")
+
+    @property
+    def data_rows(self) -> list[list[str]]:
+        """Everything under the header row."""
+        return self.rows[1:]
 
 
 @dataclass

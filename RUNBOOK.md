@@ -156,9 +156,14 @@ session.
 
 **Sheets as a sink.** `SHEETS_SPREADSHEET_ID` (the long id in the sheet's
 URL). Every delivery appends one row per package — run id, candidate, role,
-band, score, coverage, reviewer, decision, when, corrections, integrity, the
-reasoning — and never a quotation. Column A holds the run id and is read back
-first, so a retry after a lost response does not write a duplicate.
+outcome, score, coverage, reviewer, decision, when, corrections, integrity,
+the reasoning — and never a quotation. Column A holds the run id and is read
+back first, so a retry after a lost response does not write a duplicate. The
+first delivery into an empty sheet writes the labelled header row and formats
+it once: bold, frozen, every cell wrapped, a readable width per column. Start
+with an empty sheet; a sheet that already has rows is appended to as it is.
+The same table is on the queue page under **Sent**, with a column per
+destination saying whether it arrived and where.
 
 **Slack as the notifier.** In Slack: create an app, give its bot token the
 `chat:write` scope, install it to the workspace, and invite the bot to the

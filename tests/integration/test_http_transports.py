@@ -265,6 +265,42 @@ def test_sheets_reads_the_key_column_and_appends_rows(key_file: Path) -> None:
     assert json.loads(append.data) == {"values": [["01a0-new", "ana", "ai-engineer"]]}
 
 
+def test_sheets_formats_the_first_sheet_it_finds(key_file: Path) -> None:
+    """The header is frozen and bold, every cell wraps, each column has a
+    width — addressed to the sheet id the spreadsheet reports, not to 0."""
+    http = _Http(
+        (200, {"sheets": [{"properties": {"sheetId": 42}}]}),
+        (200, {"replies": []}),
+    )
+    transport = SheetsHttpTransport(_account(key_file, http), urlopen=http)
+
+    transport.format_sheet("sheet-1", (100, 300))
+
+    meta, update = http.requests
+    assert meta.full_url.endswith("/spreadsheets/sheet-1?fields=sheets.properties.sheetId")
+    assert update.full_url.endswith("/spreadsheets/sheet-1:batchUpdate")
+    requests = json.loads(update.data)["requests"]
+    kinds = [next(iter(item)) for item in requests]
+    assert kinds == [
+        "updateSheetProperties",
+        "repeatCell",
+        "repeatCell",
+        "updateDimensionProperties",
+        "updateDimensionProperties",
+    ]
+    assert requests[0]["updateSheetProperties"]["properties"] == {
+        "sheetId": 42,
+        "gridProperties": {"frozenRowCount": 1},
+    }
+    assert requests[1]["repeatCell"]["cell"]["userEnteredFormat"]["wrapStrategy"] == "WRAP"
+    assert requests[2]["repeatCell"]["cell"]["userEnteredFormat"]["textFormat"] == {"bold": True}
+    assert [r["updateDimensionProperties"]["properties"]["pixelSize"] for r in requests[3:]] == [
+        100,
+        300,
+    ]
+    assert all(json.dumps(item).count('"sheetId": 42') == 1 for item in requests)
+
+
 def test_a_sheets_refusal_carries_its_status(key_file: Path) -> None:
     http = _Http((403, {"error": {"message": "The caller does not have permission"}}))
     transport = SheetsHttpTransport(_account(key_file, http), urlopen=http)

@@ -101,7 +101,8 @@ class DriveHttpTransport:
 
 
 class SheetsHttpTransport:
-    """``values.get`` on one column and ``values.append`` for the rows."""
+    """``values.get`` on one column, ``values.append`` for the rows, and one
+    ``batchUpdate`` to format the header when the sheet was empty."""
 
     def __init__(self, account: ServiceAccount, *, urlopen: Any = None) -> None:
         self.account = account
@@ -124,6 +125,57 @@ class SheetsHttpTransport:
         )
         updates = body.get("updates") or {}
         return str(updates.get("updatedRange") or spreadsheet_id)
+
+    def format_sheet(self, spreadsheet_id: str, widths: tuple[int, ...]) -> None:
+        """Bold frozen header, wrapped text everywhere, a width per column."""
+        meta = _json(self._call(f"{SHEETS_API}/{spreadsheet_id}?fields=sheets.properties.sheetId"))
+        sheets = meta.get("sheets") or [{}]
+        sheet_id = int((sheets[0].get("properties") or {}).get("sheetId", 0))
+        requests: list[dict[str, Any]] = [
+            {
+                "updateSheetProperties": {
+                    "properties": {"sheetId": sheet_id, "gridProperties": {"frozenRowCount": 1}},
+                    "fields": "gridProperties.frozenRowCount",
+                }
+            },
+            {
+                "repeatCell": {
+                    "range": {"sheetId": sheet_id},
+                    "cell": {
+                        "userEnteredFormat": {"wrapStrategy": "WRAP", "verticalAlignment": "TOP"}
+                    },
+                    "fields": "userEnteredFormat(wrapStrategy,verticalAlignment)",
+                }
+            },
+            {
+                "repeatCell": {
+                    "range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1},
+                    "cell": {
+                        "userEnteredFormat": {
+                            "textFormat": {"bold": True},
+                            "backgroundColor": {"red": 0.93, "green": 0.94, "blue": 0.96},
+                        }
+                    },
+                    "fields": "userEnteredFormat(textFormat,backgroundColor)",
+                }
+            },
+            *(
+                {
+                    "updateDimensionProperties": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "dimension": "COLUMNS",
+                            "startIndex": index,
+                            "endIndex": index + 1,
+                        },
+                        "properties": {"pixelSize": width},
+                        "fields": "pixelSize",
+                    }
+                }
+                for index, width in enumerate(widths)
+            ),
+        ]
+        self._call(f"{SHEETS_API}/{spreadsheet_id}:batchUpdate", payload={"requests": requests})
 
     def _call(self, url: str, payload: dict[str, Any] | None = None) -> bytes:
         try:

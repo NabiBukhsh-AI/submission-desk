@@ -1,5 +1,5 @@
 """The two command-line actions the queue page can now do: pull the source,
-send what is approved.
+send what is approved — and the table of what was sent.
 
 What is asserted: pulling reads the configured source and accepts every
 candidate found; an empty source accepts nothing and starts nothing; a source
@@ -147,6 +147,36 @@ def test_sending_delivers_every_approved_run(client: tuple[TestClient, Deps]) ->
     assert "1 sent" in body["sentence"]
     rows = http.get("/api/runs", params={"filter": "Decided"}).json()
     assert [row["status"] for row in rows] == ["delivered"]
+
+
+def test_the_sent_table_is_the_spreadsheet_row_plus_each_destination(
+    client: tuple[TestClient, Deps],
+) -> None:
+    """What the page shows is what every sink was given, never the evidence."""
+    http, deps = client
+    _approved(deps)
+    http.post("/api/deliveries")
+
+    [row] = http.get("/api/deliveries").json()
+
+    assert row["candidate_id"] == "ana"
+    assert row["role_id"] == "ai-engineer"
+    assert row["decision"] == "approve"
+    assert row["reviewer_id"] == "rec-9"
+    assert row["status"] == "delivered"
+    assert isinstance(row["reasoning"], list) and row["reasoning"]
+    [csv] = row["destinations"]
+    assert csv["sink_id"] == "csv"
+    assert csv["status"] == "delivered"
+    assert csv["reference"].endswith("results.csv:1")
+    assert not {"evidence", "quotes", "spans"} & set(row)
+
+
+def test_the_sent_table_is_empty_before_anything_is_sent(client: tuple[TestClient, Deps]) -> None:
+    http, deps = client
+    _approved(deps)
+
+    assert http.get("/api/deliveries").json() == []
 
 
 def test_sending_with_nothing_approved_says_so(client: tuple[TestClient, Deps]) -> None:

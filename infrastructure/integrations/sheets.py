@@ -11,7 +11,10 @@ batch that spends its afternoon being rate-limited.
 Duplicate suppression is a pre-read of column A. A retry after a partial failure
 is the ordinary case — the append succeeded and the response was lost — and
 without the check the reviewer gets two rows for one decision and has to work out
-which is real.
+which is real. The same pre-read says whether the sheet is empty: the first
+delivery into an empty sheet writes the header row first and formats it once —
+bold, frozen, wrapped text, readable column widths — so what a recruiter opens
+is a table, not a dump.
 
 What goes in a row is narrow on purpose: the outcome and the reasoning, never
 the evidence. A spreadsheet full of quotations from candidates' CVs is a copy of
@@ -32,22 +35,27 @@ SCOPE = "https://www.googleapis.com/auth/spreadsheets"
 
 DEFAULT_QPS = 2.0
 
-#: The header, in order. Fixed rather than derived, so a field added upstream
-#: does not shift the columns of a sheet somebody has already built filters on.
+#: The header, in order, as a recruiter reads it. Fixed rather than derived,
+#: so a field added upstream does not shift the columns of a sheet somebody has
+#: already built filters on.
 HEADER: tuple[str, ...] = (
-    "run_id",
-    "candidate_id",
-    "role",
-    "band",
-    "score",
-    "coverage",
-    "reviewer",
-    "decision",
-    "decided_at",
-    "corrections",
-    "integrity",
-    "reasoning",
+    "Run id",
+    "Candidate",
+    "Role",
+    "Outcome",
+    "Score",
+    "Coverage",
+    "Reviewer",
+    "Decision",
+    "Decided at",
+    "Corrections",
+    "Integrity",
+    "Reasoning",
 )
+
+#: Column widths in pixels, in header order. The reasoning column is wide and
+#: wrapped, because it is the one somebody actually reads.
+COLUMN_WIDTHS: tuple[int, ...] = (140, 140, 160, 170, 70, 90, 110, 110, 170, 100, 90, 520)
 
 #: Column A holds the run id, and is what a retry reads back to avoid a
 #: duplicate row.
@@ -69,6 +77,12 @@ class SheetsTransport(Protocol):
 
     def append_rows(self, spreadsheet_id: str, rows: list[list[str]]) -> str:
         """Append, returning whatever the far side calls the range it wrote."""
+        ...
+
+    def format_sheet(self, spreadsheet_id: str, widths: tuple[int, ...]) -> None:
+        """Make the first row a header and the table readable. Called once,
+        after the header is written; cosmetic, so a failure is not a delivery
+        failure."""
         ...
 
 
@@ -116,7 +130,8 @@ class SheetsSink:
             self._maybe_disable(existing)
             return existing
 
-        already: set[str] = set(existing.detail.get("keys", []))
+        keys: list[str] = existing.detail.get("keys", [])
+        already = set(keys)
         fresh = [payload for payload in payloads if payload.run_id not in already]
         skipped = len(payloads) - len(fresh)
 
@@ -131,18 +146,25 @@ class SheetsSink:
             )
 
         rows = [row_for(payload) for payload in fresh]
+        # An empty sheet gets its header first, in the same append, so a
+        # recruiter never opens a sheet of unlabelled columns.
+        empty = not keys
+        if empty:
+            rows.insert(0, list(HEADER))
         result = with_retries(lambda: self._append(rows), sleep=self._sleep)
 
         if not result.ok:
             self._maybe_disable(result)
             return result
 
+        formatted = self._format() if empty else None
+
         return AdapterResult(
             ok=True,
             external_ref=result.external_ref,
             attempts=result.attempts,
             latency_ms=_elapsed(started),
-            detail={"appended": len(rows), "skipped": skipped},
+            detail={"appended": len(fresh), "skipped": skipped, "formatted": formatted},
         )
 
     # --- the two calls -------------------------------------------------------
@@ -162,6 +184,17 @@ class SheetsSink:
         except Exception as error:
             return _failure(error, "the results could not be added to the spreadsheet")
         return AdapterResult.succeeded(written)
+
+    def _format(self) -> bool:
+        """Once, when the header is written. The rows are already there; a
+        formatting call that fails leaves a plain table, which is still the
+        result, so it neither retries nor fails the delivery."""
+        self.bucket.take(sleep=self._sleep)
+        try:
+            self.transport.format_sheet(self.spreadsheet_id, COLUMN_WIDTHS)
+        except Exception:
+            return False
+        return True
 
     def _maybe_disable(self, result: AdapterResult) -> None:
         if result.error_code and result.error_code.disables_adapter:

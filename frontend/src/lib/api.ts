@@ -260,6 +260,34 @@ export type Health = {
 
 export type Delivered = { delivered: number; pending_retry: number; skipped: number; sentence: string }
 
+// One row of the sent table: what every destination was given, and what each
+// did with it. The same columns as the spreadsheet.
+export type Destination = {
+  sink_id: string
+  status: 'delivered' | 'pending_retry' | 'failed'
+  reference: string
+  attempts: number
+  error: string
+  delivered_at: string
+}
+export type SentRow = {
+  run_id: string
+  candidate_id: string
+  role_id: string
+  band: string
+  band_label: string
+  score: number | null
+  coverage: number
+  reviewer_id: string
+  decision: string
+  decided_at: string
+  corrections: number
+  integrity: string
+  reasoning: string[]
+  status: string
+  destinations: Destination[]
+}
+
 // --- calls -------------------------------------------------------------------
 
 export const api = {
@@ -284,6 +312,7 @@ export const api = {
       json({ role_id: roleId }),
     ),
   deliver: () => request<Delivered>('/api/deliveries', { method: 'POST' }),
+  sent: () => request<SentRow[]>('/api/deliveries'),
   reassess: (runIds: string[], roleId: string) =>
     request<{ accepted: number; role_id: string }>(
       '/api/runs/reassess',

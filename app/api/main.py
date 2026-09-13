@@ -49,12 +49,13 @@ from application.recovery import reconcile
 from application.use_cases import admin, rubrics
 from application.use_cases.delete_run import DeleteRefused, delete_run, is_sample
 from application.use_cases.deliver_approved import deliver_approved
+from application.use_cases.list_deliveries import list_deliveries
 from application.use_cases.process_batch import process_batch
 from application.use_cases.reassess import candidates_from_runs
 from application.use_cases.recompute_recommendation import recompute
 from application.use_cases.retry_deliveries import retry_deliveries
 from application.use_cases.submit_review import ReviewRejected, submit_review
-from domain.contracts.enums import ReviewAction
+from domain.contracts.enums import Band, ReviewAction
 from domain.contracts.review import Override
 from domain.ports.sources import CandidateRef, DocumentRef, SourceUnavailable
 from domain.security import banner_for
@@ -331,6 +332,39 @@ def deliver(_user: str = Guarded) -> dict[str, Any]:
         "skipped": len(sent.skipped) + len(retried.refused),
         "sentence": sentence,
     }
+
+
+@app.get("/api/deliveries")
+def sent(_user: str = Guarded) -> list[dict[str, Any]]:
+    """Every run that reached delivery: the row each destination was given,
+    and what each destination did with it. The spreadsheet's table, here."""
+    return [
+        {
+            "run_id": row.payload.run_id,
+            "candidate_id": row.payload.candidate_id,
+            "role_id": row.payload.role_id,
+            "band": row.payload.band,
+            "band_label": band_label(_band_enum(row.payload.band)),
+            "score": row.payload.score,
+            "coverage": row.payload.coverage,
+            "reviewer_id": row.payload.reviewer_id,
+            "decision": row.payload.reviewer_action,
+            "decided_at": row.payload.decided_at,
+            "corrections": row.payload.override_count,
+            "integrity": row.payload.integrity_tier,
+            "reasoning": list(row.payload.derivation),
+            "status": row.status.value,
+            "destinations": [item.__dict__ for item in row.destinations],
+        }
+        for row in list_deliveries(deps())
+    ]
+
+
+def _band_enum(value: str) -> Band | None:
+    try:
+        return Band(value)
+    except ValueError:
+        return None
 
 
 class Reassess(BaseModel):

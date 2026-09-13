@@ -69,7 +69,10 @@ results go. When the source is a Google Drive folder, **Pull from Google
 Drive** reads it and processes every candidate found against the chosen
 role. **Send approved** delivers every approved candidate — to the CSV file
 and, when one is configured, the spreadsheet — and reports in a sentence
-what was sent and what will be retried.
+what was sent and what will be retried. The **Sent** filter shows the table
+the destinations were given — candidate, role, outcome, score, coverage,
+decision, reasoning — with a column per destination: *Sent* and where, or
+*Will retry* and why.
 
 ### Upload
 

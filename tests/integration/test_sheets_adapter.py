@@ -15,7 +15,13 @@ from __future__ import annotations
 import pytest
 
 from domain.ports.sinks import AdapterError, DeliveryPayload
-from infrastructure.integrations.sheets import HEADER, SCOPE, SheetsSink, row_for
+from infrastructure.integrations.sheets import (
+    HEADER,
+    SCOPE,
+    SheetsSink,
+    SheetsTransportError,
+    row_for,
+)
 from tests.fakes.fake_transports import FakeSheets, Script, no_sleep
 
 PAYLOAD = DeliveryPayload(
@@ -49,8 +55,9 @@ def test_a_package_is_appended() -> None:
     result = sink(sheets).deliver(PAYLOAD)
 
     assert result.ok
-    assert len(sheets.rows) == 1
-    assert sheets.rows[0][0] == "01a08a99"
+    assert sheets.rows[0] == list(HEADER)
+    assert len(sheets.data_rows) == 1
+    assert sheets.data_rows[0][0] == "01a08a99"
 
 
 def test_a_batch_is_one_call() -> None:
@@ -65,7 +72,7 @@ def test_a_batch_is_one_call() -> None:
 
     assert result.ok
     assert sheets.append_count == 1
-    assert len(sheets.rows) == 20
+    assert len(sheets.data_rows) == 20
 
 
 def test_the_written_range_is_reported() -> None:
@@ -82,6 +89,48 @@ def test_an_empty_batch_is_not_a_call() -> None:
     assert sheets.append_count == 0
 
 
+# --- the header -----------------------------------------------------------------------
+
+
+def test_an_empty_sheet_gets_a_header_and_is_formatted_once() -> None:
+    """What a recruiter opens is a table with labelled columns, frozen and
+    wrapped. The second delivery finds the header and adds nothing but rows."""
+    sheets = FakeSheets()
+    sink(sheets).deliver(PAYLOAD)
+    second = DeliveryPayload(**{**PAYLOAD.__dict__, "run_id": "run-b"})
+
+    sink(sheets).deliver(second)
+
+    assert sheets.rows[0] == list(HEADER)
+    assert [row[0] for row in sheets.data_rows] == ["01a08a99", "run-b"]
+    assert sheets.calls.count("format") == 1
+
+
+def test_a_sheet_that_already_has_rows_gets_no_second_header() -> None:
+    sheets = FakeSheets(rows=[list(HEADER), ["run-old", "x", "ai-engineer"]])
+
+    sink(sheets).deliver(PAYLOAD)
+
+    assert sum(1 for row in sheets.rows if row == list(HEADER)) == 1
+    assert "format" not in sheets.calls
+
+
+def test_a_formatting_failure_is_not_a_delivery_failure() -> None:
+    """The rows are there. Bold headers are not what a delivery is."""
+
+    class Unformattable(FakeSheets):
+        def format_sheet(self, spreadsheet_id: str, widths: tuple[int, ...]) -> None:
+            raise SheetsTransportError(500, "formatting is down")
+
+    sheets = Unformattable()
+
+    result = sink(sheets).deliver(PAYLOAD)
+
+    assert result.ok
+    assert result.detail["formatted"] is False
+    assert len(sheets.data_rows) == 1
+
+
 # --- duplicate suppression ----------------------------------------------------------
 
 
@@ -92,7 +141,7 @@ def test_the_same_run_is_not_appended_twice() -> None:
 
     sink(sheets).deliver(PAYLOAD)
 
-    assert len(sheets.rows) == 1
+    assert len(sheets.data_rows) == 1
 
 
 def test_a_repeat_reports_success() -> None:
@@ -117,7 +166,7 @@ def test_a_partial_repeat_appends_only_what_is_missing() -> None:
 
     result = sink(sheets).deliver_batch([first, second])
 
-    assert len(sheets.rows) == 2
+    assert len(sheets.data_rows) == 2
     assert result.detail["appended"] == 1
     assert result.detail["skipped"] == 1
 
@@ -221,7 +270,7 @@ def test_an_absent_score_is_blank_rather_than_zero() -> None:
 
 def test_the_run_id_is_first() -> None:
     """Column A is what duplicate suppression reads."""
-    assert HEADER[0] == "run_id"
+    assert HEADER[0] == "Run id"
     assert row_for(PAYLOAD)[0] == PAYLOAD.run_id
 
 

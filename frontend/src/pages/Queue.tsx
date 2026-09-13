@@ -3,6 +3,7 @@ import { CloudDownload, Play, Send, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useVocabulary } from '@/lib/vocabulary'
 import { RolePicker } from '@/components/RolePicker'
+import { SentTable } from '@/components/SentTable'
 import { StatusChip } from '@/components/StatusChip'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,8 @@ import { href } from '@/lib/router'
 import { cn } from '@/lib/utils'
 
 const DEFAULT_FILTER = 'Needs attention'
+// Not a status filter: the table of what was sent, as the destinations saw it.
+const SENT = 'Sent'
 const REFRESH_MS = 5000
 
 // Read from the API on every render and refreshed while processing is under
@@ -39,6 +42,7 @@ export function Queue({ health }: { health: Health | null }) {
   const targetRole = chosenRole || roles?.[0]?.role_id || ''
 
   useEffect(() => {
+    if (filter === SENT) return
     let cancelled = false
     const load = () =>
       api
@@ -58,7 +62,7 @@ export function Queue({ health }: { health: Health | null }) {
     }
   }, [filter])
 
-  const filters = vocabulary ? Object.keys(vocabulary.filters) : [DEFAULT_FILTER]
+  const filters = [...(vocabulary ? Object.keys(vocabulary.filters) : [DEFAULT_FILTER]), SENT]
   const visible = rows ?? []
   const allChosen = visible.length > 0 && visible.every((run) => selected.has(run.run_id))
 
@@ -121,7 +125,7 @@ export function Queue({ health }: { health: Health | null }) {
       const result = await api.deliver()
       const report = result.pending_retry > 0 || result.skipped > 0 ? toast.warning : toast.success
       report(result.sentence, { duration: 8000 })
-      setFilter('Decided')
+      setFilter(SENT)
     } catch (failure) {
       toast.error(failure instanceof ApiError ? failure.message : 'Nothing could be sent.', { duration: 10000 })
     } finally {
@@ -203,7 +207,9 @@ export function Queue({ health }: { health: Health | null }) {
         </div>
       )}
 
-      {rows === null ? (
+      {filter === SENT ? (
+        <SentTable />
+      ) : rows === null ? (
         <p className="mt-6 text-muted-foreground" aria-live="polite">
           Loading…
         </p>
