@@ -24,6 +24,7 @@ from typing import Any, Protocol
 from domain.ports.notifiers import ALLOWED_FIELDS, Notification, NotificationKind
 from domain.ports.sinks import AdapterError, AdapterResult
 from infrastructure.integrations.retrying import classify_status, with_retries
+from infrastructure.observability.logging import get_logger
 
 #: How each event reads in the channel. Written here so the wording is
 #: reviewable as a set, and so nothing can be assembled from candidate data at
@@ -95,6 +96,16 @@ class SlackNotifier:
         result = with_retries(lambda: self._post(text, payload), sleep=self._sleep)
         if not result.ok and result.error_code and result.error_code.disables_adapter:
             self._disabled_reason = result.message
+        # The outcome, in the log the operator watches: which message, whether
+        # Slack took it, and if not, what it said. Counts only, like the message.
+        get_logger().info(
+            "notification.sent" if result.ok else "notification.failed",
+            notifier=self.notifier_id,
+            kind=notification.kind.value,
+            **{k: v for k, v in payload.items() if k not in ("kind", "link", "occurred_at")},
+            error_code=result.error_code.value if result.error_code else None,
+            message=None if result.ok else result.message,
+        )
         return result
 
     def _post(self, text: str, payload: dict[str, object]) -> AdapterResult:

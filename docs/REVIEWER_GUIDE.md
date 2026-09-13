@@ -64,6 +64,13 @@ twice; the same documents on the same role are recognised, not repeated), and
 sample candidates that ship with the system are marked *sample* and cannot be
 deleted.
 
+Above the table, one line says where documents come from and where approved
+results go. When the source is a Google Drive folder, **Pull from Google
+Drive** reads it and processes every candidate found against the chosen
+role. **Send approved** delivers every approved candidate — to the CSV file
+and, when one is configured, the spreadsheet — and reports in a sentence
+what was sent and what will be retried.
+
 ### Upload
 
 Choose the role, then the files: PDF, Word or plain text, up to 25 MB and eight

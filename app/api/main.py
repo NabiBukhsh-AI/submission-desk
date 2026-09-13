@@ -48,13 +48,15 @@ from application.deps import Deps
 from application.recovery import reconcile
 from application.use_cases import admin, rubrics
 from application.use_cases.delete_run import DeleteRefused, delete_run, is_sample
+from application.use_cases.deliver_approved import deliver_approved
 from application.use_cases.process_batch import process_batch
 from application.use_cases.reassess import candidates_from_runs
 from application.use_cases.recompute_recommendation import recompute
+from application.use_cases.retry_deliveries import retry_deliveries
 from application.use_cases.submit_review import ReviewRejected, submit_review
 from domain.contracts.enums import ReviewAction
 from domain.contracts.review import Override
-from domain.ports.sources import CandidateRef, DocumentRef
+from domain.ports.sources import CandidateRef, DocumentRef, SourceUnavailable
 from domain.security import banner_for
 from infrastructure.factory import build_deps, settings_from_env
 
@@ -272,6 +274,65 @@ def run_delete(run_id: UUID, _user: str = Guarded) -> None:
         raise HTTPException(409, str(refused)) from refused
 
 
+class Pull(BaseModel):
+    role_id: str
+
+
+@app.post("/api/source/pull", status_code=202)
+def pull(body: Pull, _user: str = Guarded) -> dict[str, Any]:
+    """Read every candidate in the configured source and process them.
+
+    The web form of ``submission-desk process``: the same listing, the same
+    batch, on a thread. A source that cannot be reached answers with the
+    adapter's sentence, which names the share or the setting to fix.
+    """
+    wired = deps()
+    if wired.settings.demo_mode:
+        raise HTTPException(403, "Demo mode is on, so nothing new is processed.")
+    if body.role_id not in {role.role_id for role in rubrics.list_roles(wired)}:
+        raise HTTPException(422, f"There is no role called {body.role_id!r}.")
+    try:
+        candidates = wired.source.list_candidates(limit=50)
+    except SourceUnavailable as unavailable:
+        raise HTTPException(503, str(unavailable)) from unavailable
+    if candidates:
+        threading.Thread(
+            target=process_batch,
+            args=(candidates, body.role_id, wired),
+            daemon=True,
+            name="pull-batch",
+        ).start()
+    return {
+        "accepted": len(candidates),
+        "source": getattr(wired.source, "source_id", "local"),
+        "role_id": body.role_id,
+    }
+
+
+@app.post("/api/deliveries")
+def deliver(_user: str = Guarded) -> dict[str, Any]:
+    """Send every approved package, then retry any that half-failed.
+
+    The web form of ``submission-desk deliver`` and ``retry-deliveries``, in
+    that order. Synchronous: a delivery is one append per sink, and the
+    sentence that comes back is the point of pressing the button.
+    """
+    wired = deps()
+    if wired.settings.demo_mode:
+        raise HTTPException(403, "Demo mode is on, so nothing is sent anywhere.")
+    sent = deliver_approved(wired)
+    retried = retry_deliveries(wired)
+    sentence = sent.sentence()
+    if retried.attempted:
+        sentence = f"{sentence} {retried.sentence()}"
+    return {
+        "delivered": len(sent.delivered) + len(retried.completed),
+        "pending_retry": len(sent.pending_retry) + len(retried.still_failing),
+        "skipped": len(sent.skipped) + len(retried.refused),
+        "sentence": sentence,
+    }
+
+
 class Reassess(BaseModel):
     run_ids: list[UUID]
     role_id: str
@@ -307,12 +368,19 @@ def _json(value: Any) -> Any:
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    settings = deps().settings
+    wired = deps()
+    settings = wired.settings
     return {
         "ok": True,
         "demo_mode": settings.demo_mode,
         "reviewer_configured": bool(settings.reviewer_id),
         "provider": settings.model_provider,
+        # Names only — which adapters are wired, never an id or a token — so
+        # the queue can offer "pull from Drive" and "send approved" when they
+        # would do something.
+        "source": getattr(wired.source, "source_id", "local"),
+        "sinks": [getattr(sink, "sink_id", "?") for sink in wired.sinks or ()],
+        "notifier": getattr(wired.notifier, "notifier_id", "none"),
     }
 
 

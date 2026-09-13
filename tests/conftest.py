@@ -14,6 +14,12 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+# Never read the developer's .env. Set at import, not in a fixture, because
+# the API module reads settings when it is imported, which is before any
+# fixture runs; a real Slack token or a Drive folder in the file would turn
+# an offline test into a live one.
+os.environ.setdefault("ENV_FILE", "")
+
 
 @pytest.fixture(autouse=True)
 def offline_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -23,9 +29,6 @@ def offline_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     forgot to set this would pass locally, cost money, and fail in CI.
     """
     monkeypatch.setenv("MODEL_PROVIDER", "fake")
-    # And never read the developer's .env: a real Slack token or spreadsheet
-    # id in the file would turn an offline test into a live one.
-    monkeypatch.setenv("ENV_FILE", "")
 
 
 @pytest.fixture(autouse=True, scope="session")

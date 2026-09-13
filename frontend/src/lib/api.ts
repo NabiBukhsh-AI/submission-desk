@@ -252,7 +252,13 @@ export type Health = {
   demo_mode: boolean
   reviewer_configured: boolean
   provider: string
+  // Adapter names only: 'local' | 'drive'; ['csv', 'sheets']; 'console' | 'slack' | 'none'.
+  source: string
+  sinks: string[]
+  notifier: string
 }
+
+export type Delivered = { delivered: number; pending_retry: number; skipped: number; sentence: string }
 
 // --- calls -------------------------------------------------------------------
 
@@ -272,6 +278,12 @@ export const api = {
     request<RubricView>(`/api/admin/rubrics/${roleId}`, json({ data }, 'PUT')),
   resetRubric: (roleId: string) =>
     request<void>(`/api/admin/rubrics/${roleId}`, { method: 'DELETE' }),
+  pull: (roleId: string) =>
+    request<{ accepted: number; source: string; role_id: string }>(
+      '/api/source/pull',
+      json({ role_id: roleId }),
+    ),
+  deliver: () => request<Delivered>('/api/deliveries', { method: 'POST' }),
   reassess: (runIds: string[], roleId: string) =>
     request<{ accepted: number; role_id: string }>(
       '/api/runs/reassess',

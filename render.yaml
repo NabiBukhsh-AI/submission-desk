@@ -47,6 +47,25 @@ services:
         value: /var/data/logs
       - key: BLIND_MODE
         value: "true"
+      # The integrations. Leave every one of these unset and the service reads
+      # its inbox, writes a CSV and logs notifications. To switch them on, add
+      # the values in the dashboard (Environment): the four ids and tokens as
+      # environment variables, the Google key as a Secret File at the path
+      # below. RENDER_EXTERNAL_URL, which Render sets itself, becomes the link
+      # in each Slack message.
+      #
+      # - key: SOURCE_ADAPTER
+      #   value: drive
+      # - key: GOOGLE_APPLICATION_CREDENTIALS
+      #   value: /etc/secrets/service-account.json
+      # - key: DRIVE_FOLDER_ID
+      #   sync: false
+      # - key: SHEETS_SPREADSHEET_ID
+      #   sync: false
+      # - key: SLACK_BOT_TOKEN
+      #   sync: false
+      # - key: SLACK_CHANNEL
+      #   sync: false
     # Paid plans only. Uncomment for a database that survives deploys.
     # disk:
     #   name: data

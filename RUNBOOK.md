@@ -183,16 +183,20 @@ a real Google or Slack account was made in this sprint; the first one is the
 verification, and the doctor and the sentences above are what you will see
 if a share or a scope is missing.
 
-**Trying all three locally.** With the settings in `.env`:
+**Trying all three.** With the settings in `.env` (or in the service's
+environment), the queue page shows a line naming the source, the sinks and
+the notifier, with two buttons: **Pull from Google Drive** reads the folder
+and processes every candidate in it against the chosen role, and **Send
+approved** delivers every approved run and retries any that half-failed.
+They are the web form of the two commands:
 
     submission-desk doctor                  # `document source: drive …`, `destinations: results to csv, sheets; notifications to slack`
     submission-desk process --role ai-engineer   # reads the Drive folder; Slack gets "N candidate(s) ready"
     make api-live                           # approve one in the interface
     submission-desk deliver                 # a row appears in the sheet; a failure is posted to Slack
 
-The doctor names the destinations without contacting them; the first
-`process` and the first `deliver` are the calls that prove the shares and
-the scopes.
+The doctor names the destinations without contacting them; the first pull
+and the first delivery are the calls that prove the shares and the scopes.
 
 ### Housekeeping
 
@@ -388,6 +392,19 @@ Tesseract. `render.yaml` is the blueprint.
    reviewer id, the provider and the models are already set from the
    environment; **Settings → Test the connection** confirms the key.
 3. Upload a CV.
+
+**Switching on Drive, Sheets and Slack there.** In the service's
+**Environment** tab: add `SOURCE_ADAPTER=drive`, `DRIVE_FOLDER_ID`,
+`SHEETS_SPREADSHEET_ID`, `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` as
+environment variables; under **Secret Files** add the service-account JSON
+with the filename `service-account.json`, and point
+`GOOGLE_APPLICATION_CREDENTIALS` at it: Render mounts secret files under
+`/etc/secrets/`, so the value is that directory plus the filename. Save,
+let it redeploy, and the queue page gains **Pull from Google Drive** and
+**Send approved**; Slack messages link back through `RENDER_EXTERNAL_URL`,
+which Render sets itself. Removing the variables and the file returns the
+service to the inbox, the CSV and the log. The commented block at the end
+of `render.yaml` lists the same names.
 
 What the free plan does and does not do: the service sleeps after fifteen
 minutes idle (the first request wakes it, slowly) and its filesystem is

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Play, Trash2 } from 'lucide-react'
+import { CloudDownload, Play, Send, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useVocabulary } from '@/lib/vocabulary'
 import { RolePicker } from '@/components/RolePicker'
 import { StatusChip } from '@/components/StatusChip'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ApiError, api, type RunRow } from '@/lib/api'
+import { ApiError, api, type Health, type RunRow } from '@/lib/api'
 import { useRoles } from '@/lib/roles'
 import { href } from '@/lib/router'
 import { cn } from '@/lib/utils'
@@ -18,7 +18,15 @@ const REFRESH_MS = 5000
 // way, so two people looking at the queue see the same thing and a refresh
 // loses nothing. Rows can be selected and sent through again against another
 // role: the stored documents are used, so nothing is uploaded twice.
-export function Queue() {
+//
+// The strip above the table names where documents come from and where
+// results go, and offers the two actions that need a person: pulling the
+// source folder, and sending what has been approved.
+const SOURCE_NAMES: Record<string, string> = { local: 'the inbox folder', drive: 'Google Drive' }
+const SINK_NAMES: Record<string, string> = { csv: 'a CSV file', sheets: 'Google Sheets' }
+const NOTIFIER_NAMES: Record<string, string> = { console: 'the server log', slack: 'Slack' }
+
+export function Queue({ health }: { health: Health | null }) {
   const vocabulary = useVocabulary()
   const roles = useRoles()
   const [filter, setFilter] = useState(DEFAULT_FILTER)
@@ -87,6 +95,40 @@ export function Queue() {
     setBusy(false)
   }
 
+  const pullSource = async () => {
+    if (!targetRole) return
+    setBusy(true)
+    try {
+      const result = await api.pull(targetRole)
+      if (result.accepted === 0) {
+        toast.info(`Nothing new in ${SOURCE_NAMES[result.source] ?? result.source}.`)
+      } else {
+        toast.success(
+          `${result.accepted} candidate${result.accepted === 1 ? '' : 's'} read from ${SOURCE_NAMES[result.source] ?? result.source}. Progress shows here.`,
+        )
+        setFilter('In progress')
+      }
+    } catch (failure) {
+      toast.error(failure instanceof ApiError ? failure.message : 'The source could not be read.', { duration: 10000 })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const sendApproved = async () => {
+    setBusy(true)
+    try {
+      const result = await api.deliver()
+      const report = result.pending_retry > 0 || result.skipped > 0 ? toast.warning : toast.success
+      report(result.sentence, { duration: 8000 })
+      setFilter('Decided')
+    } catch (failure) {
+      toast.error(failure instanceof ApiError ? failure.message : 'Nothing could be sent.', { duration: 10000 })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const runSelected = async () => {
     if (selected.size === 0 || !targetRole) return
     setBusy(true)
@@ -136,6 +178,29 @@ export function Queue() {
         <p role="alert" className="mt-4 text-destructive">
           {error}
         </p>
+      )}
+
+      {health && !health.demo_mode && (
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 text-sm">
+          <p className="grow text-muted-foreground">
+            Documents come from <strong className="text-foreground">{SOURCE_NAMES[health.source] ?? health.source}</strong>;
+            approved results go to{' '}
+            <strong className="text-foreground">
+              {health.sinks.map((sink) => SINK_NAMES[sink] ?? sink).join(' and ') || 'nowhere'}
+            </strong>
+            ; notifications to <strong className="text-foreground">{NOTIFIER_NAMES[health.notifier] ?? health.notifier}</strong>.
+          </p>
+          {health.source !== 'local' && (
+            <Button type="button" variant="outline" onClick={pullSource} disabled={busy || !targetRole}>
+              <CloudDownload aria-hidden="true" />
+              Pull from {SOURCE_NAMES[health.source] ?? health.source}
+            </Button>
+          )}
+          <Button type="button" variant="outline" onClick={sendApproved} disabled={busy}>
+            <Send aria-hidden="true" />
+            Send approved
+          </Button>
+        </div>
       )}
 
       {rows === null ? (

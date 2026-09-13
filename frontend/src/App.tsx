@@ -171,7 +171,7 @@ export default function App() {
               }}
             />
           ) : route.page === 'login' ? (
-            <Queue />
+            <Queue health={health} />
           ) : route.page === 'review' ? (
             // Keyed by run, so opening another candidate remounts the page: fresh
             // state, fresh clock.
@@ -183,7 +183,7 @@ export default function App() {
           ) : route.page === 'admin' ? (
             <Admin />
           ) : (
-            <Queue />
+            <Queue health={health} />
           )}
         </main>
 
