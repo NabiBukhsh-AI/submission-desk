@@ -5,9 +5,11 @@ Every route is one use case call and a JSON shape built from contracts with
 or moves a run, and the architecture test that keeps the Streamlit pages honest
 walks this file too.
 
-No authentication. Anybody who can reach the port can review; the runbook and
-the threat model say so, and a deployment beyond one reviewer on one machine
-puts an identity layer in front of this process.
+One admin, and every route past ``/api/health`` and ``/api/auth`` requires
+that admin's session cookie. The account, the sessions and the settings the
+admin page writes are use cases in ``application/use_cases/admin.py``; this
+file sets and reads the cookie and nothing more. Transport security is the
+deployment's: the cookie is marked secure when the request arrived over HTTPS.
 
     uvicorn app.api.main:app --reload         # development
     make api                                  # the same, from the Makefile
@@ -20,7 +22,7 @@ from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -36,6 +38,7 @@ from app.vocabulary import (
 )
 from application.deps import Deps
 from application.recovery import reconcile
+from application.use_cases import admin
 from application.use_cases.process_batch import process_batch
 from application.use_cases.recompute_recommendation import recompute
 from application.use_cases.submit_review import ReviewRejected, submit_review
@@ -47,10 +50,18 @@ from infrastructure.factory import build_deps, settings_from_env
 
 app = FastAPI(title="Submission Desk", docs_url="/api/docs", openapi_url="/api/openapi.json")
 
-# The Vite dev server and a static build served from anywhere. Wide open on
-# purpose: there is no credential to protect, and a stricter list would be
-# security theatre in front of an unauthenticated API.
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# The session travels as a cookie, so the browser origins that may send it are
+# named. The Vite dev server is the default; a deployment lists its own in
+# CORS_ORIGINS.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(settings_from_env().cors_origins),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+SESSION_COOKIE = "sd_session"
 
 _deps: Deps | None = None
 
@@ -62,6 +73,139 @@ def deps() -> Deps:
         _deps = build_deps(settings_from_env())
         reconcile(_deps)
     return _deps
+
+
+def rebuild() -> Deps:
+    """After the admin page saves: the next request reads the new settings."""
+    global _deps  # noqa: PLW0603
+    _deps = None
+    return deps()
+
+
+def current_user(request: Request) -> str:
+    """The guard. Every route past health and auth depends on it."""
+    user = admin.session_user(deps(), request.cookies.get(SESSION_COOKIE))
+    if user is None:
+        raise HTTPException(401, "Sign in to continue.")
+    return user
+
+
+Guarded = Depends(current_user)
+
+
+# --- auth -------------------------------------------------------------------------------
+
+
+class Credentials(BaseModel):
+    username: str
+    password: str
+
+
+@app.get("/api/auth/status")
+def auth_status(request: Request) -> dict[str, Any]:
+    """Whether the account exists yet, and who this session belongs to."""
+    wired = deps()
+    return {
+        "setup_required": admin.setup_required(wired),
+        "user": admin.session_user(wired, request.cookies.get(SESSION_COOKIE)),
+    }
+
+
+@app.post("/api/auth/setup", status_code=201)
+def auth_setup(body: Credentials, request: Request, response: Response) -> dict[str, Any]:
+    """Create the one admin account, then sign it in. Refused once it exists."""
+    try:
+        admin.create_admin(deps(), body.username, body.password)
+        token = admin.login(deps(), body.username, body.password)
+    except admin.AdminRefused as refused:
+        raise HTTPException(409, str(refused)) from refused
+    _set_session(request, response, token)
+    return {"user": body.username.strip()}
+
+
+@app.post("/api/auth/login")
+def auth_login(body: Credentials, request: Request, response: Response) -> dict[str, Any]:
+    try:
+        token = admin.login(deps(), body.username, body.password)
+    except admin.AdminRefused as refused:
+        raise HTTPException(401, str(refused)) from refused
+    _set_session(request, response, token)
+    return {"user": body.username.strip()}
+
+
+@app.post("/api/auth/logout", status_code=204)
+def auth_logout(response: Response) -> None:
+    response.delete_cookie(SESSION_COOKIE, path="/")
+
+
+def _set_session(request: Request, response: Response, token: str) -> None:
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=admin.SESSION_SECONDS,
+        httponly=True,
+        samesite="lax",
+        # Secure only when the request itself came over TLS; a cookie that is
+        # never sent over plain HTTP would lock the local demo out.
+        secure=request.url.scheme == "https",
+        path="/",
+    )
+
+
+# --- admin ------------------------------------------------------------------------------
+
+
+class SettingsBody(BaseModel):
+    changes: dict[str, str] = {}
+    keys: dict[str, str] = {}
+
+
+@app.get("/api/admin/settings")
+def admin_settings(_user: str = Guarded) -> dict[str, Any]:
+    view = admin.describe_settings(deps())
+    return {
+        "values": view.values,
+        "keys_set": view.keys_set,
+        "demo_mode": view.demo_mode,
+        "effective_provider": view.effective_provider,
+    }
+
+
+@app.put("/api/admin/settings")
+def admin_save(body: SettingsBody, _user: str = Guarded) -> dict[str, Any]:
+    try:
+        admin.save_settings(deps(), body.changes, body.keys)
+    except admin.AdminRefused as refused:
+        raise HTTPException(422, str(refused)) from refused
+    try:
+        rebuild()
+    except Exception as failure:
+        raise HTTPException(
+            422, f"Saved, but the system could not start with these settings: {failure}"
+        ) from failure
+    return admin_settings(_user)
+
+
+@app.delete("/api/admin/keys/{provider}", status_code=204)
+def admin_clear_key(provider: str, _user: str = Guarded) -> None:
+    try:
+        admin.clear_key(deps(), provider)
+    except admin.AdminRefused as refused:
+        raise HTTPException(404, str(refused)) from refused
+    rebuild()
+
+
+@app.post("/api/admin/probe")
+def admin_probe(_user: str = Guarded) -> dict[str, Any]:
+    """One tiny call through the configured provider, and what it cost."""
+    result = admin.probe_provider(deps())
+    return {
+        "ok": result.ok,
+        "message": result.message,
+        "input_tokens": result.input_tokens,
+        "output_tokens": result.output_tokens,
+        "tier": result.tier,
+    }
 
 
 def _json(value: Any) -> Any:
@@ -83,7 +227,7 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/api/vocabulary")
-def vocabulary() -> dict[str, Any]:
+def vocabulary(_user: str = Guarded) -> dict[str, Any]:
     """Every sentence the interface shows, so no client invents its own."""
     return {
         "chips": {
@@ -107,7 +251,9 @@ def vocabulary() -> dict[str, Any]:
 
 
 @app.get("/api/runs")
-def runs(filter: str = "Needs attention", limit: int = 200) -> list[dict[str, Any]]:
+def runs(
+    filter: str = "Needs attention", limit: int = 200, _user: str = Guarded
+) -> list[dict[str, Any]]:
     statuses = QUEUE_FILTERS.get(filter)
     if statuses is None:
         raise HTTPException(404, f"no filter named {filter!r}")
@@ -124,7 +270,7 @@ def _run_row(run: Any) -> dict[str, Any]:
 
 
 @app.get("/api/runs/{run_id}")
-def run_detail(run_id: UUID) -> dict[str, Any]:
+def run_detail(run_id: UUID, _user: str = Guarded) -> dict[str, Any]:
     """Everything the review page shows, in one round trip."""
     wired = deps()
     run = wired.runs.get(run_id)
@@ -147,7 +293,7 @@ def run_detail(run_id: UUID) -> dict[str, Any]:
 
 
 @app.get("/api/runs/{run_id}/passages/{evidence_id}")
-def passage(run_id: UUID, evidence_id: UUID) -> dict[str, Any]:
+def passage(run_id: UUID, evidence_id: UUID, _user: str = Guarded) -> dict[str, Any]:
     """The quotation in its paragraph: "show me where"."""
     wired = deps()
     item = next(
@@ -183,7 +329,7 @@ class Preview(BaseModel):
 
 
 @app.post("/api/runs/{run_id}/preview")
-def preview(run_id: UUID, body: Preview) -> dict[str, Any]:
+def preview(run_id: UUID, body: Preview, _user: str = Guarded) -> dict[str, Any]:
     """What the band becomes if these corrections are applied. Nothing is saved."""
     wired = deps()
     before = wired.evidence.recommendation_for_run(run_id)
@@ -210,7 +356,7 @@ class Decision(BaseModel):
 
 
 @app.post("/api/runs/{run_id}/decision")
-def decide(run_id: UUID, body: Decision) -> dict[str, Any]:
+def decide(run_id: UUID, body: Decision, _user: str = Guarded) -> dict[str, Any]:
     try:
         result = submit_review(
             run_id,
@@ -236,6 +382,7 @@ async def upload(
     files: Annotated[list[UploadFile], File()],
     candidate_ids: Annotated[list[str], Form()],
     role_id: Annotated[str, Form()] = "ai-engineer",
+    _user: str = Guarded,
 ) -> dict[str, Any]:
     """Accept documents and process them in the background.
 

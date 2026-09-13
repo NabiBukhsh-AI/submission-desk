@@ -68,7 +68,23 @@ class Settings:
     source_adapter: str = "local"
     pipeline_version: str = "1"
     routing_policy_id: str = "routed"
+    #: fake | anthropic | openrouter. Anything else refuses at the first call.
     model_provider: str = "fake"
+    #: The active provider's credential. Never logged, never returned to a
+    #: browser; the doctor reports presence only.
+    model_api_key: str = ""
+    model_api_base_url: str = ""
+    #: Provider model identifiers bound to the two tiers. Empty means unbound.
+    model_cheap_id: str = ""
+    model_strong_id: str = ""
+    #: Prices per million tokens, as decimal strings. Empty means unpriced,
+    #: which renders as "not configured" and never as zero.
+    price_cheap_input: str = ""
+    price_cheap_output: str = ""
+    price_strong_input: str = ""
+    price_strong_output: str = ""
+    #: Browser origins allowed to call the API with a session cookie.
+    cors_origins: tuple[str, ...] = ("http://localhost:5173",)
     blind_mode: bool = True
     calibration_enabled: bool = False
     demo_mode: bool = False
@@ -171,3 +187,8 @@ class Deps:
     #: inside the pipeline.
     redactor: Callable[[str], str] | None = None
     rubric_loader: Callable[[str], Any] | None = None
+    #: Operator settings and the admin account, written from the admin page.
+    settings_store: Any = None
+    #: Seals secrets at rest and hashes passwords. A port, so the use cases
+    #: that manage the admin account never see a cipher.
+    secrets: Any = None

@@ -30,7 +30,10 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[Te
     )
     deps = wire(build_deps(settings))
     monkeypatch.setattr(api_module, "_deps", deps)
-    yield TestClient(api_module.app), deps
+    http = TestClient(api_module.app)
+    # Every route is guarded, so the fixture creates the admin and signs in.
+    http.post("/api/auth/setup", json={"username": "admin", "password": "correct horse battery"})
+    yield http, deps
     close_thread_connection(settings.db_path)
 
 
@@ -184,7 +187,10 @@ def test_uploads_are_refused_in_demo_mode(tmp_path: Path, monkeypatch: pytest.Mo
     )
     monkeypatch.setattr(api_module, "_deps", build_deps(settings))
     try:
-        response = TestClient(api_module.app).post(
+        http = TestClient(api_module.app)
+        credentials = {"username": "admin", "password": "correct horse battery"}
+        http.post("/api/auth/setup", json=credentials)
+        response = http.post(
             "/api/uploads", files=[("files", ("cv.txt", b"hello"))], data={"candidate_ids": ["a"]}
         )
         assert response.status_code == 403

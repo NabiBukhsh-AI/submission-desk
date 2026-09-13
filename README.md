@@ -35,8 +35,12 @@ one. The React one needs Node and two terminals:
     make api       # the HTTP API on :8000, demo mode on
     make web       # the frontend on :5173, proxying /api to it
 
-Both render what the use cases return; neither holds business logic, and the
-same architecture test walks both.
+The first visit creates the one admin account; after that the same form signs
+in. **Settings** in the top bar is the admin page: choose Anthropic or
+OpenRouter, paste the key, pick a model per tier, test the connection. Start
+the API with `make api-live` instead to accept real documents. Both interfaces
+render what the use cases return; neither holds business logic, and the same
+architecture test walks both.
 
 ## What is in the box
 

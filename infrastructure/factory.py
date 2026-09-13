@@ -10,8 +10,10 @@ will actually talk to, read this function, not the whole tree.
 
 from __future__ import annotations
 
+import hashlib
 import os
 from dataclasses import replace
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import yaml
@@ -28,15 +30,19 @@ from infrastructure.integrations.local import LocalFolderSource
 from infrastructure.integrations.slack import ConsoleNotifier
 from infrastructure.models.cache import ResponseCache
 from infrastructure.models.fake import FakeModelClient
+from infrastructure.models.pricing import Pricing, TierPrice
 from infrastructure.models.pricing import load as load_pricing
 from infrastructure.models.provider import ProviderModelClient, bindings_hash, load_bindings
 from infrastructure.models.repairing import RepairingClient
 from infrastructure.models.routing.policies import policy_for
 from infrastructure.models.stand_in import for_rubrics
+from infrastructure.models.transports import anthropic as anthropic_transport
+from infrastructure.models.transports import openrouter as openrouter_transport
 from infrastructure.observability.metrics_sql import SqliteMetricsReader
 from infrastructure.observability.redactor import Redactor
 from infrastructure.prompts.registry import PromptRegistry
 from infrastructure.rubrics import RubricLoader
+from infrastructure.secrets import LocalSecrets, app_secret
 from infrastructure.security.scan import Scanner
 from infrastructure.storage.blobs import BlobStore
 from infrastructure.storage.sqlite.repositories import (
@@ -50,6 +56,7 @@ from infrastructure.storage.sqlite.repositories import (
     SqliteLlmCacheRepository,
     SqliteReviewRepository,
     SqliteRunRepository,
+    SqliteSettingsRepository,
 )
 from infrastructure.storage.sqlite.schema import migrate
 
@@ -94,7 +101,16 @@ def settings_from_env(**overrides: object) -> Settings:
         pilot_data_dir=os.environ.get("PILOT_DATA_DIR") or "",
         source_adapter=(os.environ.get("SOURCE_ADAPTER") or "local").strip().lower(),
         routing_policy_id=os.environ.get("MODEL_ROUTING_POLICY") or "routed",
-        model_provider=os.environ.get("MODEL_PROVIDER") or "fake",
+        model_provider=(os.environ.get("MODEL_PROVIDER") or "fake").strip().lower(),
+        model_api_key=os.environ.get("MODEL_API_KEY", "").strip(),
+        model_api_base_url=os.environ.get("MODEL_API_BASE_URL", "").strip(),
+        model_cheap_id=os.environ.get("MODEL_CHEAP_ID", "").strip(),
+        model_strong_id=os.environ.get("MODEL_STRONG_ID", "").strip(),
+        cors_origins=tuple(
+            origin.strip()
+            for origin in (os.environ.get("CORS_ORIGINS") or "http://localhost:5173").split(",")
+            if origin.strip()
+        ),
         blind_mode=flag("BLIND_MODE", True),
         calibration_enabled=flag("CALIBRATION_ENABLED", False),
         calibration_top_k=number("CALIBRATION_TOP_K", 3),
@@ -122,6 +138,99 @@ def settings_from_env(**overrides: object) -> Settings:
     return resolved
 
 
+#: Settings the admin page may write, by the name stored, and how each is read
+#: back onto ``Settings``. Everything not listed stays environment-only.
+STORED_STRINGS = {
+    "model_provider": "model_provider",
+    "model_cheap_id": "model_cheap_id",
+    "model_strong_id": "model_strong_id",
+    "model_api_base_url": "model_api_base_url",
+    "price_cheap_input": "price_cheap_input",
+    "price_cheap_output": "price_cheap_output",
+    "price_strong_input": "price_strong_input",
+    "price_strong_output": "price_strong_output",
+    "reviewer_id": "reviewer_id",
+}
+STORED_FLAGS = {"blind_mode": "blind_mode"}
+STORED_NUMBERS = {"retention_days": "retention_days"}
+#: One sealed key per provider, so switching providers does not lose the other.
+STORED_KEYS = {"anthropic": "anthropic_api_key", "openrouter": "openrouter_api_key"}
+
+
+def stored_settings(settings: Settings, store: object, secrets: object) -> Settings:
+    """The settings with what the admin page saved laid over the environment.
+
+    The store wins where it has a value; an empty table changes nothing. The
+    active provider's key is opened here, in the composition root, so the
+    plaintext exists in one process and reaches nothing that logs.
+    """
+    rows = store.all()  # type: ignore[attr-defined]
+    values = {name: value for name, (value, _secret) in rows.items()}
+    changes: dict[str, object] = {}
+
+    for name, field in STORED_STRINGS.items():
+        if name in values:
+            changes[field] = values[name].strip()
+    for name, field in STORED_FLAGS.items():
+        if name in values:
+            changes[field] = values[name].strip().lower() in ("1", "true", "yes", "on")
+    for name, field in STORED_NUMBERS.items():
+        if name in values and values[name].strip().isdigit():
+            changes[field] = int(values[name])
+
+    provider = str(changes.get("model_provider", settings.model_provider)).strip().lower()
+    sealed = values.get(STORED_KEYS.get(provider, ""))
+    if sealed:
+        changes["model_api_key"] = secrets.open(sealed)  # type: ignore[attr-defined]
+
+    return replace(settings, **changes) if changes else settings  # type: ignore[arg-type]
+
+
+def pricing_for(settings: Settings, fallback: Pricing) -> Pricing:
+    """Prices from the admin page when it has set any, else the file.
+
+    Both directions of a tier or neither: half a price is the estimate the
+    pricing module exists to refuse. A rate of zero is honoured — the free
+    tiers exist — because it was typed, not assumed.
+    """
+
+    def decimal(text: str) -> Decimal | None:
+        try:
+            return Decimal(text.strip()) if text.strip() else None
+        except InvalidOperation:
+            return None
+
+    tiers = {
+        ModelTier.CHEAP.value: TierPrice(
+            input_per_million=decimal(settings.price_cheap_input),
+            output_per_million=decimal(settings.price_cheap_output),
+        ),
+        ModelTier.STRONG.value: TierPrice(
+            input_per_million=decimal(settings.price_strong_input),
+            output_per_million=decimal(settings.price_strong_output),
+        ),
+    }
+    if not any(price.configured for price in tiers.values()):
+        return fallback
+
+    fingerprint = "|".join(
+        f"{name}:{price.input_per_million}/{price.output_per_million}"
+        for name, price in sorted(tiers.items())
+    )
+    return Pricing(
+        tiers=tiers,
+        source=f"admin@{hashlib.sha256(fingerprint.encode()).hexdigest()[:16]}",
+        version="admin",
+    )
+
+
+#: The providers a deployment can name, and the transport each one uses.
+PROVIDERS = {
+    "anthropic": anthropic_transport.make_transport,
+    "openrouter": openrouter_transport.make_transport,
+}
+
+
 def build_models(
     settings: Settings,
     rubric_loader: RubricLoader | None = None,
@@ -140,13 +249,12 @@ def build_models(
     key. It is not a model: every result it produces is a claim about the
     pipeline, and the evaluation report says so at the top.
 
-    With ``MODEL_PROVIDER=live`` the client is the provider adapter, with the
-    tier bindings from config/models.yaml and the key from the environment.
-    The transport — the one function that performs the HTTP call — is the
-    deployment-specific piece and is injected here rather than written in:
-    the request shape a vendor expects is theirs, and a guess at it in this
-    file would name a vendor in code that knows only about tiers. Without one,
-    the first call refuses with a sentence saying so.
+    With a named provider — ``anthropic`` or ``openrouter`` — the client is
+    the provider adapter with that provider's transport, the tier bindings
+    from the settings (the admin page, the environment, or config/models.yaml,
+    in that order) and the key from the settings. A provider this file does
+    not know refuses at the first call with a sentence saying so, rather than
+    guessing at a wire format.
 
     Around the client, in order: one schema repair at the same tier, and, for
     the live provider only, the response cache. The cache is not applied to
@@ -167,19 +275,24 @@ def build_models(
         )
         return RepairingClient(inner=offline, repair_template=repair_template)
 
-    # Bindings from the committed file, or from the environment when the file
-    # leaves a tier empty, so a deployment can bind models without editing
-    # something that is checked in.
+    # Bindings from the settings first, then the committed file, so the admin
+    # page wins over config/models.yaml and neither has to be edited to use
+    # the other.
     bindings = load_bindings(_read_yaml(_repo_root() / "config" / "models.yaml"))
-    from_env = {ModelTier.CHEAP: "MODEL_CHEAP_ID", ModelTier.STRONG: "MODEL_STRONG_ID"}
-    for tier, variable in from_env.items():
-        if not bindings[tier].is_bound and os.environ.get(variable, "").strip():
-            bindings[tier] = replace(bindings[tier], model=os.environ[variable].strip())
+    chosen = {ModelTier.CHEAP: settings.model_cheap_id, ModelTier.STRONG: settings.model_strong_id}
+    for tier, model_id in chosen.items():
+        if model_id:
+            bindings[tier] = replace(bindings[tier], model=model_id)
+
+    if transport is None and settings.model_provider in PROVIDERS and settings.model_api_key:
+        transport = PROVIDERS[settings.model_provider](
+            settings.model_api_key, settings.model_api_base_url
+        )
 
     live = ProviderModelClient(
         bindings=bindings,
-        api_key=os.environ.get("MODEL_API_KEY", "").strip(),
-        base_url=os.environ.get("MODEL_API_BASE_URL", "").strip(),
+        api_key=settings.model_api_key,
+        base_url=settings.model_api_base_url,
         transport=transport,
     )
     fingerprint = bindings_hash(bindings)
@@ -309,13 +422,21 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
     """
     settings = settings or settings_from_env()
 
-    # Before the database, before anything. A refusal here is the demo mode
-    # guarantee; everything after it is construction.
+    # A refusal here is the demo mode guarantee; everything after it is
+    # construction. Before the database is touched, so a refused start leaves
+    # nothing behind. The admin page cannot set a path, so the stored
+    # settings read below cannot change this answer.
     enforce_demo_mode(settings)
 
     db_path = Path(settings.db_path)
     if migrate_db:
         migrate(db_path)
+
+    # What the admin page saved, laid over the environment, before the model
+    # client is built so the stored key reaches it.
+    settings_store = SqliteSettingsRepository(db_path)
+    secrets = LocalSecrets(app_secret(db_path))
+    settings = stored_settings(settings, settings_store, secrets)
 
     # One reader, shared. The scanner rasterises pages through the same engine
     # the extractor uses, so a machine with no Tesseract degrades both in the
@@ -364,7 +485,7 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
         prompts=prompts,
         router=policy_for(settings.routing_policy_id),
         rubric_loader=rubric_loader,
-        pricing=load_pricing(_repo_root() / "config" / "pricing.yaml"),
+        pricing=pricing_for(settings, load_pricing(_repo_root() / "config" / "pricing.yaml")),
         metrics=SqliteMetricsReader(db_path),
         sinks=build_sinks(settings),
         notifier=build_notifier(settings),
@@ -377,4 +498,6 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
             token_ceiling=settings.token_ceiling_per_run,
             max_escalations=settings.max_escalations_per_candidate,
         ),
+        settings_store=settings_store,
+        secrets=secrets,
     )

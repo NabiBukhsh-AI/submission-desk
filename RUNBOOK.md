@@ -50,7 +50,7 @@ the offline system. Three things decide what a deployment is:
 
 | Setting | Offline default | A pilot |
 |---|---|---|
-| `MODEL_PROVIDER` | `fake` — recorded fixtures, then the deterministic stand-in | `live`, with `MODEL_API_KEY`, the tier bindings, and a transport (section 6) |
+| `MODEL_PROVIDER` | `fake` — recorded fixtures, then the deterministic stand-in | `anthropic` or `openrouter`, with the key and tier bindings — set on the admin page or in the environment (section 6) |
 | `DEMO_MODE` | off | off. On, the system reads only the synthetic corpus and cannot send anything |
 | `REVIEWER_ID` | unset — nothing can be approved | the reviewer's identifier, because every decision is attributed |
 
@@ -61,6 +61,27 @@ the local source at a folder. Both are refused while `DEMO_MODE` is on.
 Limits that are not environment variables — page counts, document sizes, OCR
 triggers — are in `config/limits.yaml`. Tier bindings are in
 `config/models.yaml`. Prices are in `config/pricing.yaml` and ship empty.
+
+### The admin account
+
+The HTTP API and the React frontend are behind one admin account. There is
+nothing to configure: the first person to open the frontend against a fresh
+database is asked to create the account (any username, a password of at least
+ten characters), and is signed in. After that the same form signs in. The
+password is stored as a scrypt hash; the session is a signed cookie that lasts
+twelve hours. There is one account and no way to create a second one from the
+interface; a lost password is reset by deleting the `admin_username` and
+`admin_password_hash` rows from the `settings` table, after which the next
+visitor creates the account again.
+
+**Settings** in the top bar is the admin page: the provider, its API key, the
+model per tier and its prices, the reviewer id, blind mode and retention. What
+is saved there is laid over the environment and takes effect on the next
+request, no restart. Keys are sealed with `APP_SECRET` before they are written
+and are never sent back to a browser — the page shows that a key is set, not
+what it is. `APP_SECRET` is generated once beside the database when it is not
+set; set it explicitly for any deployment beyond one laptop, and know that
+changing it makes every stored key unreadable (re-enter them on the page).
 
 ## 3. Operate
 
@@ -188,27 +209,44 @@ Restore from backup; there is no other copy of a decision.
 
 ## 6. The model provider
 
-The provider client is built and its failure paths are tested. What is not in
-the repository is the one function that performs the HTTP call to a specific
-vendor, because the request shape a vendor expects is theirs and this code
-knows only about tiers. To run against a real provider:
+Two providers are wired, and the offline stand-in is the third:
 
-1. Bind the tiers: set `model:` for `tier_cheap` and `tier_strong` in
-   `config/models.yaml`, or set `MODEL_CHEAP_ID` and `MODEL_STRONG_ID`.
-2. Set `MODEL_PROVIDER=live` and `MODEL_API_KEY`. Set `MODEL_API_BASE_URL` if
-   the transport needs it.
-3. Write the transport: a callable `transport(payload, *, timeout) -> dict`
-   that sends the payload built by `ProviderModelClient._payload` and returns
-   `{"id": <the provider's request id>, "text": <the model's JSON string>,
-   "usage": {"input_tokens": n, "output_tokens": n, "cached_input_tokens": n}}`.
-   Usage must be what the provider reported, never estimated; a response
-   without it is recorded as zero tokens with the omission flagged. Raise
-   `TimeoutError` on timeout; the client turns it into a run-level failure.
-4. Pass it to `build_models(..., transport=...)` in
-   `infrastructure/factory.py`, where every other adapter is chosen.
-5. Enter rates in `config/pricing.yaml` if you want cost in money.
-6. `submission-desk doctor` should now pass the provider check. The first real
-   call is the probe.
+| Provider | Key from | Models the admin page offers | Cost |
+|---|---|---|---|
+| `anthropic` | console.anthropic.com → API keys (`sk-ant-…`) | `claude-haiku-4-5` ($1 / $5), `claude-sonnet-5` ($2 / $10), `claude-opus-5` ($5 / $25) per million input / output tokens | paid |
+| `openrouter` | openrouter.ai/keys (`sk-or-…`) | `inclusionai/ling-3.0-flash-fin:free`, `dots-studio/dots-3-note-preview:free` | free tiers, rate-limited |
+| `fake` | — | — | nothing |
+
+The prices are what the vendors published when this was written; the fields
+on the admin page are editable because they change. Any other model id the
+provider serves can be typed in.
+
+To run against a real provider, on the admin page (or in the environment):
+
+1. Choose the provider and paste its key. The key is sealed before it is
+   stored.
+2. Pick a model per tier. The cheap tier reads every document; the strong tier
+   handles criteria the rubric marks high-stakes. A preset fills the model id
+   and both prices; zero is a real price for a free model.
+3. Save, then **Test the connection**. That makes one tiny structured call and
+   reports what the provider said and what it cost — the only time the
+   system contacts a provider on purpose without a candidate.
+4. Start the API without demo mode (`make api-live`) so uploads are accepted.
+   `make api` is demo mode: the stand-in answers whatever the page says.
+
+Structured output is asked for as a JSON schema on both providers. OpenRouter's
+free models do not all honour `response_format`; when one refuses, the same
+request is sent once more with the schema described in the prompt, and the
+answer is validated against the contract either way. Every provider failure —
+a rejected key, no credit, a rate limit, a refusal — reaches the queue as a
+sentence saying what to do, never a traceback.
+
+A third provider is one file: a `make_transport(api_key, base_url)` in
+`infrastructure/models/transports/` returning `transport(payload, *, timeout)
+-> {"id", "text", "usage": {"input_tokens", "output_tokens",
+"cached_input_tokens"}}`, registered in `PROVIDERS` in
+`infrastructure/factory.py`. Usage must be what the provider reported, never
+estimated. `tests/unit/test_provider_transports.py` shows what to assert.
 
 **When the provider is down.** Runs fail at the first model call with a
 retryable error and land in the queue as "Could not finish". Nothing is lost:

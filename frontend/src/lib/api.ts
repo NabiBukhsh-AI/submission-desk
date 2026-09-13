@@ -12,7 +12,9 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE}${path}`, init)
+  // The session is a cookie; a static build served from another origin
+  // still has to send it.
+  const response = await fetch(`${BASE}${path}`, { credentials: 'include', ...init })
   if (!response.ok) {
     let detail = response.statusText
     try {
@@ -23,11 +25,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(response.status, detail)
   }
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
-const json = (body: unknown): RequestInit => ({
-  method: 'POST',
+const json = (body: unknown, method = 'POST'): RequestInit => ({
+  method,
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body),
 })
@@ -154,6 +157,25 @@ export type DecisionBody = {
 
 export type DecisionResult = { status: string; band: string | null; message: string }
 
+export type AuthStatus = { setup_required: boolean; user: string | null }
+
+export type Provider = 'fake' | 'anthropic' | 'openrouter'
+
+export type SettingsView = {
+  values: Record<string, string>
+  keys_set: Record<string, boolean>
+  demo_mode: boolean
+  effective_provider: Provider
+}
+
+export type Probe = {
+  ok: boolean
+  message: string
+  input_tokens: number
+  output_tokens: number
+  tier: string
+}
+
 export type Health = {
   ok: boolean
   demo_mode: boolean
@@ -165,6 +187,22 @@ export type Health = {
 
 export const api = {
   health: () => request<Health>('/api/health'),
+  auth: {
+    status: () => request<AuthStatus>('/api/auth/status'),
+    setup: (username: string, password: string) =>
+      request<{ user: string }>('/api/auth/setup', json({ username, password })),
+    login: (username: string, password: string) =>
+      request<{ user: string }>('/api/auth/login', json({ username, password })),
+    logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
+  },
+  admin: {
+    settings: () => request<SettingsView>('/api/admin/settings'),
+    save: (changes: Record<string, string>, keys: Record<string, string>) =>
+      request<SettingsView>('/api/admin/settings', json({ changes, keys }, 'PUT')),
+    clearKey: (provider: string) =>
+      request<void>(`/api/admin/keys/${provider}`, { method: 'DELETE' }),
+    probe: () => request<Probe>('/api/admin/probe', { method: 'POST' }),
+  },
   vocabulary: () => request<Vocabulary>('/api/vocabulary'),
   runs: (filter: string) => request<RunRow[]>(`/api/runs?filter=${encodeURIComponent(filter)}`),
   run: (id: string) => request<Detail>(`/api/runs/${id}`),

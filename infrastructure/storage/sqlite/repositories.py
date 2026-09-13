@@ -1232,3 +1232,38 @@ class SqliteEventRepository(SqliteRepository):
             (str(run_id),),
         ).fetchall()
         return [(row["seq"], row["node"], row["node_status"], row["occurred_at"]) for row in rows]
+
+
+# ---------------------------------------------------------------------------
+# Operator settings
+# ---------------------------------------------------------------------------
+
+
+class SqliteSettingsRepository(SqliteRepository):
+    """Settings by name. Values are stored as given; sealing is the caller's."""
+
+    def get(self, name: str) -> str | None:
+        row = self.connection.execute(
+            "SELECT value FROM settings WHERE name = ?", (name,)
+        ).fetchone()
+        return None if row is None else str(row["value"])
+
+    def set(self, name: str, value: str, *, secret: bool = False) -> None:
+        with write_transaction(self.connection) as write:
+            write.execute(
+                """
+                INSERT INTO settings (name, value, secret, updated_at) VALUES (?, ?, ?, ?)
+                ON CONFLICT(name) DO UPDATE SET
+                    value = excluded.value, secret = excluded.secret,
+                    updated_at = excluded.updated_at
+                """,
+                (name, value, int(secret), datetime.now(UTC).isoformat()),
+            )
+
+    def delete(self, name: str) -> None:
+        with write_transaction(self.connection) as write:
+            write.execute("DELETE FROM settings WHERE name = ?", (name,))
+
+    def all(self) -> dict[str, tuple[str, bool]]:
+        rows = self.connection.execute("SELECT name, value, secret FROM settings").fetchall()
+        return {str(row["name"]): (str(row["value"]), bool(row["secret"])) for row in rows}

@@ -184,6 +184,11 @@ Tests: `tests/unit/test_budget_guard.py`, `tests/unit/test_no_fabricated_costs.p
 
 - Read from the environment at the point of use, never at import, so the
   offline claim is true on import.
+- A key saved on the admin page is sealed (Fernet, key derived from
+  `APP_SECRET` by scrypt) before it is written to the `settings` table, opened
+  only in the composition root, and never returned to a browser: the page
+  learns that a key is set, not what it is. Changing `APP_SECRET` makes every
+  stored key unreadable rather than readable by the wrong secret.
 - The doctor reports presence and never a value — not a prefix, not a length.
 - The log redactor drops keys named like credentials.
 - The secrets scanner refuses `.env` by name and known key shapes by pattern,
@@ -205,13 +210,38 @@ Tests: `tests/unit/test_budget_guard.py`, `tests/unit/test_no_fabricated_costs.p
 harness is wired to the stand-in, so the model's own behaviour under identity
 substitution is unmeasured. Neither is a control; both are stated.
 
+### T8. A stranger at the HTTP interface
+
+*Somebody who can reach the port reviews, decides, or reads settings.*
+
+- Every route past `/api/health` and `/api/auth` requires the admin session.
+  One account; the first visitor to a fresh database creates it, and the
+  interface has no way to create a second.
+- The password is stored as a scrypt hash with a fresh salt; verification is
+  constant-time and runs even when the username is wrong, so the two failures
+  take the same time and return the same sentence.
+- The session is a signed token `user:expiry:signature` (HMAC-SHA256 under
+  `APP_SECRET`) in an `HttpOnly`, `SameSite=Lax` cookie that lasts twelve
+  hours. A forged, expired, or renamed token is a stranger. Nothing is stored
+  server-side, so there is nothing to leak or to clean up.
+- CORS names the browser origins that may send the cookie (`CORS_ORIGINS`);
+  the wildcard is not accepted with credentials.
+
+Tests: `tests/integration/test_api_auth.py`.
+
 ## What is not defended against
 
-- **No authentication or authorisation.** Anybody who can reach the port can
-  do anything a reviewer can. Run on one machine for one person, or put an
-  identity layer in front. Decisions are attributed to a configured id, not a
-  verified identity.
-- **No transport security.** Streamlit serves plain HTTP. Same answer.
+- **One admin, no roles, no lockout.** The account is a gate, not an identity
+  system: anybody with the password is the admin, a guessed password is not
+  rate-limited (the scrypt cost is the only brake), and a decision is
+  attributed to the configured reviewer id rather than the account. Put an
+  identity layer in front for more than one reviewer. The Streamlit interface
+  has no gate at all and is for one person on one machine.
+- **No transport security.** Both interfaces serve plain HTTP; the session
+  cookie is marked `Secure` only when the request arrived over TLS, so a
+  deployment terminates TLS in front of the process or the cookie travels in
+  the clear. `APP_SECRET` is generated beside the database when it is not
+  set, so whoever can read the database directory can read the keys.
 - **No audit of the reviewer.** A reviewer with database access can edit a
   decision row. Optimistic concurrency stops accidents, not intent.
 - **No sandboxing of parsers.** Caps, not containment.

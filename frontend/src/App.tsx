@@ -1,28 +1,70 @@
 import { useEffect, useState } from 'react'
-import { FlaskConical, Inbox, Upload as UploadIcon } from 'lucide-react'
+import { FlaskConical, Inbox, LogOut, Settings, Upload as UploadIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
-import { api, type Health, type Vocabulary } from '@/lib/api'
-import { href, useRoute } from '@/lib/router'
+import { ApiError, api, type AuthStatus, type Health, type Vocabulary } from '@/lib/api'
+import { href, navigate, useRoute } from '@/lib/router'
 import { cn } from '@/lib/utils'
 import { VocabularyContext } from '@/lib/vocabulary'
+import { Admin } from '@/pages/Admin'
+import { Login } from '@/pages/Login'
 import { Queue } from '@/pages/Queue'
 import { Review } from '@/pages/Review'
 import { Upload } from '@/pages/Upload'
 
 export default function App() {
   const route = useRoute()
+  const [auth, setAuth] = useState<AuthStatus | null>(null)
   const [vocabulary, setVocabulary] = useState<Vocabulary | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [offline, setOffline] = useState(false)
 
   useEffect(() => {
-    api.vocabulary().then(setVocabulary).catch(() => setOffline(true))
-    api.health().then(setHealth).catch(() => setOffline(true))
+    api.auth.status().then(setAuth).catch(() => setOffline(true))
   }, [])
+
+  // Everything past the login page needs the session; loaded once it exists.
+  const user = auth?.user ?? null
+  useEffect(() => {
+    if (!user) return
+    const signedOut = (failure: unknown) => {
+      if (failure instanceof ApiError && failure.status === 401) setAuth({ setup_required: false, user: null })
+      else setOffline(true)
+    }
+    api.vocabulary().then(setVocabulary).catch(signedOut)
+    api.health().then(setHealth).catch(signedOut)
+  }, [user])
+
+  const signOut = async () => {
+    await api.auth.logout().catch(() => undefined)
+    setAuth({ setup_required: false, user: null })
+    setVocabulary(null)
+    navigate({ page: 'queue' })
+  }
+
+  if (offline) {
+    return (
+      <main className="mx-auto max-w-5xl px-4 py-6">
+        <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-4">
+          The API is not reachable. Start it with <code>make api</code> and reload.
+        </p>
+      </main>
+    )
+  }
+  if (!auth) return null
+  if (!auth.user) {
+    return (
+      <main className="px-4">
+        <Login setupRequired={auth.setup_required} onSignedIn={(name) => setAuth({ setup_required: false, user: name })} />
+        <Toaster position="bottom-right" />
+      </main>
+    )
+  }
 
   const links = [
     { route: { page: 'queue' } as const, label: 'Queue', icon: Inbox },
     { route: { page: 'upload' } as const, label: 'Upload', icon: UploadIcon },
+    { route: { page: 'admin' } as const, label: 'Settings', icon: Settings },
   ]
 
   return (
@@ -54,26 +96,31 @@ export default function App() {
                 )
               })}
             </nav>
-            {health?.demo_mode && (
-              <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs">
-                <FlaskConical className="size-3.5" aria-hidden="true" />
-                Demo mode: synthetic candidates, nothing is sent
-              </span>
-            )}
+            <div className="ml-auto flex items-center gap-3">
+              {health?.demo_mode && (
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs">
+                  <FlaskConical className="size-3.5" aria-hidden="true" />
+                  Demo mode: synthetic candidates, nothing is sent
+                </span>
+              )}
+              <span className="text-sm text-muted-foreground">{auth.user}</span>
+              <Button type="button" variant="ghost" size="sm" onClick={signOut}>
+                <LogOut aria-hidden="true" />
+                Sign out
+              </Button>
+            </div>
           </div>
         </header>
 
         <main className="mx-auto max-w-5xl px-4 py-6">
-          {offline ? (
-            <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-4">
-              The API is not reachable. Start it with <code>make api</code> and reload.
-            </p>
-          ) : route.page === 'review' ? (
+          {route.page === 'review' ? (
             // Keyed by run, so opening another candidate remounts the page: fresh
             // state, fresh clock.
             <Review key={route.runId} runId={route.runId} health={health} />
           ) : route.page === 'upload' ? (
             <Upload health={health} />
+          ) : route.page === 'admin' ? (
+            <Admin />
           ) : (
             <Queue />
           )}

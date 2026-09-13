@@ -42,9 +42,9 @@ MIN_FREE_MB = 500
 MAX_STACK_DEPTH = 4
 
 #: Credentials, by the environment variable that carries them. Presence only:
-#: the value is never read, logged, or echoed.
+#: the value is never read, logged, or echoed. The model key is checked
+#: separately because the admin page can set it too.
 CREDENTIALS = {
-    "MODEL_API_KEY": "the model provider",
     "GOOGLE_APPLICATION_CREDENTIALS": "Google Drive and Sheets",
     "SLACK_BOT_TOKEN": "Slack",
 }
@@ -193,13 +193,17 @@ def check_provider(settings: Any, deps: Any = None) -> Check:
             "model provider",
             Level.WARN,
             "the offline fake is configured",
-            "Fine for the demo and the test suite. Set MODEL_PROVIDER to assess real candidates.",
+            "Fine for the demo and the test suite. Choose a provider on the admin page "
+            "(or set MODEL_PROVIDER) to assess real candidates.",
         )
 
     bound = [
         tier
-        for tier, variable in (("tier_cheap", "MODEL_CHEAP_ID"), ("tier_strong", "MODEL_STRONG_ID"))
-        if os.environ.get(variable, "").strip()
+        for tier, model_id in (
+            ("tier_cheap", settings.model_cheap_id),
+            ("tier_strong", settings.model_strong_id),
+        )
+        if model_id.strip()
     ]
     transport = _innermost_transport(getattr(deps, "models", None))
 
@@ -207,16 +211,16 @@ def check_provider(settings: Any, deps: Any = None) -> Check:
         return Check(
             "model provider",
             Level.FAIL,
-            f"{provider} configured, but no transport is wired for it",
-            "The HTTP call to your provider is deployment configuration: pass a "
-            "transport to build_models() in infrastructure/factory.py. See RUNBOOK.md.",
+            f"{provider} configured, but no API key is set for it",
+            "Save the provider's key on the admin page, or set MODEL_API_KEY. Without it "
+            "the offline stand-in answers every call.",
         )
 
     return Check(
         "model provider",
         Level.PASS,
-        f"{provider} configured, {len(bound)} tier(s) bound from the environment. "
-        "Not contacted: the first real call is the probe.",
+        f"{provider} configured, {len(bound)} tier(s) bound. "
+        "Not contacted: the connection test on the admin page is the probe.",
     )
 
 
@@ -240,13 +244,21 @@ def check_pricing(deps: Any) -> Check:
     return Check("pricing", Level.PASS, f"configured from {pricing.source}")
 
 
-def check_credentials() -> list[Check]:
+def check_credentials(settings: Any = None) -> list[Check]:
     """Presence, never the value.
 
     A diagnostic that echoes four characters of a key is a diagnostic somebody
     pastes into a ticket, and four characters is enough to confirm a guess.
     """
-    checks = []
+    key_set = bool(getattr(settings, "model_api_key", "").strip())
+    checks = [
+        Check(
+            "credential: the model provider",
+            Level.PASS if key_set else Level.WARN,
+            "set" if key_set else "not set",
+            "" if key_set else "Optional. Save a key on the admin page, or set MODEL_API_KEY.",
+        )
+    ]
 
     for variable, what in CREDENTIALS.items():
         present = bool(os.environ.get(variable, "").strip())
@@ -372,14 +384,16 @@ def run_all() -> list[Check]:
     checks += [
         check_prompts(deps),
         check_rubrics(deps),
-        check_provider(settings, deps),
+        # deps.settings is what is in force: the environment with the admin
+        # page's saved values laid over it.
+        check_provider(deps.settings, deps),
         check_pricing(deps),
         check_ocr(),
         check_source(deps),
         check_disk(settings),
-        check_reviewer(settings),
+        check_reviewer(deps.settings),
         check_demo_mode(settings),
-        *check_credentials(),
+        *check_credentials(deps.settings),
     ]
 
     return checks

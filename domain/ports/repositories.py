@@ -323,3 +323,22 @@ class BlobStore(Protocol):
     def path_for(self, document_sha256: str) -> object:
         """The address of a hash. Never derived from a filename."""
         ...
+
+
+class SettingsRepository(Protocol):
+    """Operator settings by name, written from the admin page.
+
+    A secret is stored sealed and flagged; ``get`` returns what was stored and
+    the caller that knows the seal opens it. Environment variables remain the
+    fallback for every name, so an empty table is a fresh clone, not an error.
+    """
+
+    def get(self, name: str) -> str | None: ...
+
+    def set(self, name: str, value: str, *, secret: bool = False) -> None: ...
+
+    def delete(self, name: str) -> None: ...
+
+    def all(self) -> dict[str, tuple[str, bool]]:
+        """Every setting as ``name -> (value, is_secret)``."""
+        ...
