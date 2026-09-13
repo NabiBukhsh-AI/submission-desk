@@ -129,6 +129,53 @@ some sinks failed is `delivery_pending_retry`, with a record per sink saying
 which, and `retry-deliveries` sends only to the ones that failed. In demo mode
 both commands say that nothing is sent and leave the run approved.
 
+### Google Drive, Google Sheets, Slack
+
+Three integrations, each switched on by its settings and absent otherwise.
+All three speak to the services through the standard library; the Google
+ones authenticate as a service account, whose JSON key you download once.
+
+**The service account (Drive and Sheets).** In Google Cloud: create a
+project, enable the *Google Drive API* and the *Google Sheets API*, create a
+service account, and download a JSON key. Set
+`GOOGLE_APPLICATION_CREDENTIALS` to the file's path. The account has no
+access to anything until you share it: open the Drive folder or the
+spreadsheet and share it with the account's `client_email` (Viewer for the
+folder, Editor for the sheet). The doctor reports whether the file is set,
+never what is in it.
+
+**Drive as the source.** `SOURCE_ADAPTER=drive` and `DRIVE_FOLDER_ID` (the
+last part of the folder's URL). One folder, read-only scope; a subfolder per
+candidate, or files named `<candidate>-<anything>`. `submission-desk process`
+then reads from Drive instead of the inbox. A folder that is not shared with
+the account fails with a sentence saying so and disables the source for the
+session.
+
+**Sheets as a sink.** `SHEETS_SPREADSHEET_ID` (the long id in the sheet's
+URL). Every delivery appends one row per package — run id, candidate, role,
+band, score, coverage, reviewer, decision, when, corrections, integrity, the
+reasoning — and never a quotation. Column A holds the run id and is read back
+first, so a retry after a lost response does not write a duplicate.
+
+**Slack as the notifier.** In Slack: create an app, give its bot token the
+`chat:write` scope, install it to the workspace, and invite the bot to the
+channel (`/invite @your-app`). Set `SLACK_BOT_TOKEN` (`xoxb-…`) and
+`SLACK_CHANNEL` (the channel id, from the channel's details). Three messages
+exist — candidates ready, a delivery that failed, documents quarantined —
+each with counts and a link, never a name.
+
+Refusals are classified once for all three: a bad credential or a missing
+share disables that integration for the session with the reason on screen; a
+rate limit or an outage is retried with backoff, three attempts, and then
+reported. **What has and has not been verified:** every transport is tested
+against the documented request and response shapes with stubbed HTTP, and
+against the live endpoints with deliberately invalid credentials (Slack
+answers `invalid_auth`, Google's token service `account not found` — the
+shapes are accepted and the error paths read real answers). No run against
+a real Google or Slack account was made in this sprint; the first one is the
+verification, and the doctor and the sentences above are what you will see
+if a share or a scope is missing.
+
 ### Housekeeping
 
     submission-desk reconcile               # stalled runs become resumable

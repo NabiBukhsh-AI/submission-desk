@@ -26,7 +26,14 @@ from infrastructure.calibration.embedder import LocalEmbedder
 from infrastructure.calibration.index import NumpyCalibrationIndex
 from infrastructure.extraction.dispatcher import Extractor
 from infrastructure.extraction.ocr import TesseractEngine
+from infrastructure.integrations import drive, sheets, slack
 from infrastructure.integrations.csv_sink import CsvSink
+from infrastructure.integrations.google_auth import ServiceAccount
+from infrastructure.integrations.http_transports import (
+    DriveHttpTransport,
+    SheetsHttpTransport,
+    SlackHttpTransport,
+)
 from infrastructure.integrations.local import LocalFolderSource
 from infrastructure.integrations.slack import ConsoleNotifier
 from infrastructure.models.cache import ResponseCache
@@ -100,6 +107,11 @@ def settings_from_env(**overrides: object) -> Settings:
         inbox_dir=os.environ.get("INBOX_DIR") or "",
         pilot_data_dir=os.environ.get("PILOT_DATA_DIR") or "",
         source_adapter=(os.environ.get("SOURCE_ADAPTER") or "local").strip().lower(),
+        google_credentials_path=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip(),
+        drive_folder_id=os.environ.get("DRIVE_FOLDER_ID", "").strip(),
+        sheets_spreadsheet_id=os.environ.get("SHEETS_SPREADSHEET_ID", "").strip(),
+        slack_bot_token=os.environ.get("SLACK_BOT_TOKEN", "").strip(),
+        slack_channel=os.environ.get("SLACK_CHANNEL", "").strip(),
         routing_policy_id=os.environ.get("MODEL_ROUTING_POLICY") or "routed",
         model_provider=(os.environ.get("MODEL_PROVIDER") or "fake").strip().lower(),
         model_api_key=os.environ.get("MODEL_API_KEY", "").strip(),
@@ -391,15 +403,20 @@ def _is_within(path: Path, root: Path) -> bool:
 def build_source(settings: Settings) -> object:
     """Where candidate documents come from.
 
-    A local folder by default. Drive is available and needs a transport and a
-    folder id; absent those, the offline path is the one that works.
+    A local folder by default. ``SOURCE_ADAPTER=drive`` reads one Drive folder
+    through a service account: the key file and the folder id have to be set,
+    and the source refuses at the first call with a sentence if the folder is
+    not shared with the account. No network is touched at construction.
 
     In demo mode the folder is the synthetic corpus and nothing else, whatever
-    the inbox setting says. ``enforce_demo_mode`` has already refused any
-    setting that disagrees, so this is the second of two locks.
+    the settings say. ``enforce_demo_mode`` has already refused any setting
+    that disagrees, so this is the second of two locks.
     """
     if settings.demo_mode:
         return LocalFolderSource(DEMO_CORPUS)
+    if settings.source_adapter == "drive":
+        account = ServiceAccount(settings.google_credentials_path, drive.SCOPE)
+        return drive.DriveSource(DriveHttpTransport(account), folder_id=settings.drive_folder_id)
     return LocalFolderSource(inbox_for(settings))
 
 
@@ -408,24 +425,34 @@ def build_sinks(settings: Settings) -> tuple[object, ...]:
 
     First because it is the guarantee: it has no credentials, no network and no
     rate limit, so a run that reaches delivery always produces a file somebody
-    can open. Every other sink is optional precisely because this one is not.
-
-    Google Sheets and Slack are absent unless a transport has been supplied,
-    which for this deployment means never: the repository ships offline, and an
-    adapter that constructed a real client at startup would make that untrue.
+    can open. Google Sheets joins it when a spreadsheet id and a service-account
+    key are set; the sheet has to be shared with the account's address.
 
     In demo mode there are no sinks at all. Not disabled, not stubbed: absent,
     so that nothing in the process holds a handle that could send.
     """
     if settings.demo_mode:
         return ()
-    return (CsvSink(Path(settings.blob_dir).parent / "deliveries" / "results.csv"),)
+    sinks: list[object] = [CsvSink(Path(settings.blob_dir).parent / "deliveries" / "results.csv")]
+    if settings.sheets_spreadsheet_id and settings.google_credentials_path:
+        account = ServiceAccount(settings.google_credentials_path, sheets.SCOPE)
+        sinks.append(
+            sheets.SheetsSink(
+                SheetsHttpTransport(account), spreadsheet_id=settings.sheets_spreadsheet_id
+            )
+        )
+    return tuple(sinks)
 
 
 def build_notifier(settings: Settings) -> object | None:
-    """The console by default; nothing in demo mode, for the reason above."""
+    """Slack when a bot token and a channel are set; the console otherwise;
+    nothing in demo mode, for the reason above."""
     if settings.demo_mode:
         return None
+    if settings.slack_bot_token and settings.slack_channel:
+        return slack.SlackNotifier(
+            SlackHttpTransport(settings.slack_bot_token), channel=settings.slack_channel
+        )
     return ConsoleNotifier()
 
 

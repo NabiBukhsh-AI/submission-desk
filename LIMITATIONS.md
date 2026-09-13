@@ -182,6 +182,12 @@ refused JSON schemas, and both marked requirements supported without quoting
 anything. The provider is a settings-page choice, not a code change, but the
 choice today is one.
 
+**The integrations have not met a real account.** Drive, Sheets and Slack
+are wired and tested against the documented request shapes and, with invalid
+credentials, against the live endpoints; no run against a real folder,
+spreadsheet or channel was made in this sprint. The first one is the
+verification (`RUNBOOK.md`, section 3).
+
 **The free hosting tier forgets.** On Render's free plan the filesystem is
 wiped on every deploy: the database, the uploaded documents and the saved
 key start over. Persistent storage is a paid plan and a one-line change in

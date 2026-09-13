@@ -345,7 +345,21 @@ def check_source(deps: Any) -> Check:
     root = getattr(source, "root", None)
 
     if root is None:
-        return Check("document source", Level.PASS, getattr(source, "source_id", "configured"))
+        # A remote source. Not contacted: the first real listing is the probe.
+        name = getattr(source, "source_id", "configured")
+        folder = getattr(source, "folder_id", "")
+        if name == "drive" and not folder:
+            return Check(
+                "document source",
+                Level.FAIL,
+                "SOURCE_ADAPTER is drive but DRIVE_FOLDER_ID is not set",
+                "Set DRIVE_FOLDER_ID to the folder shared with the service account.",
+            )
+        return Check(
+            "document source",
+            Level.PASS,
+            f"{name}, folder {folder[:8]}… — not contacted; the first listing is the probe",
+        )
 
     path = Path(root)
     if not path.exists():

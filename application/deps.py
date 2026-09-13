@@ -67,6 +67,14 @@ class Settings:
     #: Real pilot documents, outside the repository. Never set in demo mode.
     pilot_data_dir: str = ""
     source_adapter: str = "local"
+    #: The integrations. Each is absent until its setting is present: a
+    #: service-account key file and a folder for Drive, a spreadsheet for
+    #: Sheets, a bot token and a channel for Slack.
+    google_credentials_path: str = ""
+    drive_folder_id: str = ""
+    sheets_spreadsheet_id: str = ""
+    slack_bot_token: str = ""
+    slack_channel: str = ""
     pipeline_version: str = "1"
     routing_policy_id: str = "routed"
     #: fake | anthropic. Anything else refuses at the first call.
