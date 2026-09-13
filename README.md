@@ -26,7 +26,7 @@ only the synthetic corpus is read, and nothing can be delivered. `make doctor`
 says whether a deployment will work and what to fix if not.
 
 `make check` runs the linters, the type checker, both pre-commit scanners and
-the offline test suite — 2,772 tests at the time of writing, none of which
+the offline test suite — 2,960 tests at the time of writing, none of which
 touch a network.
 
 There are two interfaces over the same use cases. `make demo` is the Streamlit
@@ -119,13 +119,20 @@ one, in [EVALUATION.md](docs/EVALUATION.md).
    documented limit. `scripts/overrides_to_cases.py` turns those corrections
    into draft evaluation cases, with the band left for a person to decide.
 
-## What is not measured
+## What is measured against a real model, and what is not
 
-A human baseline (no recruiter session was recorded, so the productivity claim
-is absent rather than favourable); any model's judgement (every figure above is
-from the deterministic stand-in); and cost in money. [EVALUATION.md](docs/EVALUATION.md)
-says all three in more words, and [LIMITATIONS.md](LIMITATIONS.md) says what
-else.
+`make eval-baseline` runs the twelve cases on Claude Haiku 4.5 twice: a naive
+one-call baseline and the pipeline. The naive call named the right band on 3
+of 3 banded cases, the pipeline on 2 of 3; the pipeline offered 103 quotations
+and every one was found in its source, quarantined both injected documents at
+zero cost, and routed every unplaced candidate to a person with the reason —
+at 2.3 cents and 20 seconds a candidate. The first run also found that the
+repair prompt was not resending the document; the before and after are both
+reported. [EVALUATION.md](docs/EVALUATION.md) has the tables.
+
+Not measured: a human baseline (no recruiter session was recorded, so the
+productivity claim is absent rather than favourable) and any adoption figure.
+[LIMITATIONS.md](LIMITATIONS.md) says what else.
 
 ## Where to read next
 
@@ -153,7 +160,7 @@ else.
     prompts/         versioned prompt files.   rubrics/    role definitions.
     config/          limits, routing, tier bindings, pricing (empty).
     contracts/       exported JSON Schema, checked in CI against the models.
-    scripts/         operational tooling.       tests/      2,772 offline tests.
+    scripts/         operational tooling.       tests/      2,960 offline tests.
     data/samples/    the only directory under data/ that may be committed.
 
 The direction of dependencies — `domain` inward of `application` inward of
