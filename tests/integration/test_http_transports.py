@@ -232,6 +232,19 @@ def test_drive_refusals_reach_the_adapter_as_sentences(
         source.list_candidates()
 
 
+def test_a_missing_key_file_is_named_in_the_refusal(tmp_path: Path) -> None:
+    """The sentence a person reads on the queue page says which of the three
+    "refused" causes it was — here, the file is not at the path."""
+    http = _Http()
+    account = google_auth.ServiceAccount(tmp_path / "absent.json", "scope", urlopen=http)
+    source = DriveSource(DriveHttpTransport(account, urlopen=http), folder_id="folder-1")
+
+    with pytest.raises(Exception, match="GOOGLE_APPLICATION_CREDENTIALS does not exist") as refused:
+        source.list_candidates()
+    assert str(refused.value).startswith("Access to Google Drive was refused")
+    assert http.requests == []
+
+
 def test_a_bad_credential_reaches_the_adapter_as_an_auth_failure(key_file: Path) -> None:
     http = _Http((400, {"error": "invalid_grant"}))
     account = google_auth.ServiceAccount(key_file, "scope", urlopen=http)

@@ -404,12 +404,16 @@ Tesseract. `render.yaml` is the blueprint.
 environment variables; under **Secret Files** add the service-account JSON
 with the filename `service-account.json`, and point
 `GOOGLE_APPLICATION_CREDENTIALS` at it: Render mounts secret files under
-`/etc/secrets/`, so the value is that directory plus the filename. Save,
-let it redeploy, and the queue page gains **Pull from Google Drive** and
-**Send approved**; Slack messages link back through `RENDER_EXTERNAL_URL`,
-which Render sets itself. Removing the variables and the file returns the
-service to the inbox, the CSV and the log. The commented block at the end
-of `render.yaml` lists the same names.
+`/etc/secrets/`, so the value is that directory plus the filename. Add
+`PUBLIC_URL` with the service's address so Slack messages link to the
+hosted queue (`RENDER_EXTERNAL_URL`, which Render sets itself, is the
+fallback). Save, let it redeploy, and the queue page gains **Pull from
+Google Drive** and **Send approved**. A pull that is refused says what
+Google answered in brackets — a key file that is not at the path, a key
+that is no longer valid, a folder that is not shared — so the fix is in the
+sentence. Removing the variables and the file returns the service to the
+inbox, the CSV and the log. The commented block at the end of `render.yaml`
+lists the same names.
 
 What the free plan does and does not do: the service sleeps after fifteen
 minutes idle (the first request wakes it, slowly) and its filesystem is

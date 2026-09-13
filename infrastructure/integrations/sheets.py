@@ -28,6 +28,7 @@ import time
 from typing import Any, Protocol
 
 from domain.ports.sinks import AdapterError, AdapterResult, DeliveryPayload
+from infrastructure.integrations.drive import said
 from infrastructure.integrations.retrying import TokenBucket, classify_status, with_retries
 
 #: What this adapter asks for. Append and read, on one spreadsheet.
@@ -235,7 +236,7 @@ def _failure(error: Exception, what: str) -> AdapterResult:
         )
 
     code = classify_status(int(status))
-    return AdapterResult.failed(code, _message_for(code, what))
+    return AdapterResult.failed(code, _message_for(code, what) + said(error))
 
 
 def _message_for(code: AdapterError, what: str) -> str:

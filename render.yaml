@@ -51,8 +51,8 @@ services:
       # its inbox, writes a CSV and logs notifications. To switch them on, add
       # the values in the dashboard (Environment): the four ids and tokens as
       # environment variables, the Google key as a Secret File at the path
-      # below. RENDER_EXTERNAL_URL, which Render sets itself, becomes the link
-      # in each Slack message.
+      # below. PUBLIC_URL is the link in each Slack message; RENDER_EXTERNAL_URL,
+      # which Render sets itself, is used when it is absent.
       #
       # - key: SOURCE_ADAPTER
       #   value: drive
@@ -66,6 +66,8 @@ services:
       #   sync: false
       # - key: SLACK_CHANNEL
       #   sync: false
+      # - key: PUBLIC_URL
+      #   value: https://submission-desk.onrender.com
     # Paid plans only. Uncomment for a database that survives deploys.
     # disk:
     #   name: data

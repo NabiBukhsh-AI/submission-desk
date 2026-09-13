@@ -173,7 +173,20 @@ def failure_from(error: Exception, what: str) -> AdapterResult:
         )
 
     code = classify_status(int(status))
-    return AdapterResult.failed(code, message_for(code, what))
+    return AdapterResult.failed(code, message_for(code, what) + said(error))
+
+
+def said(error: Exception) -> str:
+    """What the far side answered, appended so the sentence can be acted on.
+
+    "Access was refused" covers a key file that is not there, a key Google
+    no longer recognises, and a folder nobody shared; the transport's message
+    tells them apart, and without it the person reading has to guess.
+    """
+    detail = str(error).strip()
+    if not detail or detail.startswith("HTTP "):
+        return ""
+    return f" ({detail.rstrip('.')})"
 
 
 def message_for(code: AdapterError, what: str) -> str:

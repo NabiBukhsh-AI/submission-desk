@@ -17,6 +17,9 @@ if [ ! -d data/samples/synthetic ]; then
   python -m scripts.make_synthetic_corpus
 fi
 
-python -m app.cli.main --demo process --role ai-engineer || echo "seeding skipped: $?"
+# The samples come from the local corpus whatever the service's source is:
+# demo mode refuses to start with SOURCE_ADAPTER=drive, and the seed must
+# not be the thing that reads a real folder.
+SOURCE_ADAPTER=local python -m app.cli.main --demo process --role ai-engineer || echo "seeding skipped: $?"
 
 exec python -m app.cli.main api --host 0.0.0.0 --port "${PORT:-8000}" --logs
