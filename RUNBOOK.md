@@ -141,7 +141,9 @@ ones authenticate as a service account, whose JSON key you download once.
 **The service account (Drive and Sheets).** In Google Cloud: create a
 project, enable the *Google Drive API* and the *Google Sheets API*, create a
 service account, and download a JSON key. Set
-`GOOGLE_APPLICATION_CREDENTIALS` to the file's path. The account has no
+`GOOGLE_APPLICATION_CREDENTIALS` to the file's path — or, on a host that
+has environment variables and no files, `GOOGLE_APPLICATION_CREDENTIALS_JSON`
+to the file's contents. The account has no
 access to anything until you share it: open the Drive folder or the
 spreadsheet and share it with the account's `client_email` (Viewer for the
 folder, Editor for the sheet). The doctor reports whether the file is set,
@@ -399,21 +401,20 @@ Tesseract. `render.yaml` is the blueprint.
 3. Upload a CV.
 
 **Switching on Drive, Sheets and Slack there.** In the service's
-**Environment** tab: add `SOURCE_ADAPTER=drive`, `DRIVE_FOLDER_ID`,
-`SHEETS_SPREADSHEET_ID`, `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` as
-environment variables; under **Secret Files** add the service-account JSON
-with the filename `service-account.json`, and point
-`GOOGLE_APPLICATION_CREDENTIALS` at it: Render mounts secret files under
-`/etc/secrets/`, so the value is that directory plus the filename. Add
-`PUBLIC_URL` with the service's address so Slack messages link to the
-hosted queue (`RENDER_EXTERNAL_URL`, which Render sets itself, is the
-fallback). Save, let it redeploy, and the queue page gains **Pull from
-Google Drive** and **Send approved**. A pull that is refused says what
-Google answered in brackets — a key file that is not at the path, a key
-that is no longer valid, a folder that is not shared — so the fix is in the
-sentence. Removing the variables and the file returns the service to the
-inbox, the CSV and the log. The commented block at the end of `render.yaml`
-lists the same names.
+**Environment** tab add, as environment variables: `SOURCE_ADAPTER=drive`,
+`DRIVE_FOLDER_ID`, `SHEETS_SPREADSHEET_ID`, `SLACK_BOT_TOKEN`,
+`SLACK_CHANNEL`, `PUBLIC_URL` (the service's address, so Slack messages
+link to the hosted queue), and `GOOGLE_APPLICATION_CREDENTIALS_JSON` with
+the **contents** of the service-account key file pasted whole — the
+container has no file mount for a path to point at, and the JSON is one
+line with the key's newlines already escaped, so it pastes as it is. Save,
+let it redeploy, and the queue page gains **Pull from Google Drive** and
+**Send approved**. A pull that is refused says what Google answered in
+brackets — no key configured, a key that is not valid JSON, a credential
+Google rejected, a folder that is not shared — so the fix is in the
+sentence. Removing the variables returns the service to the inbox, the CSV
+and the log. The commented block at the end of `render.yaml` lists the same
+names.
 
 What the free plan does and does not do: the service sleeps after fifteen
 minutes idle (the first request wakes it, slowly) and its filesystem is

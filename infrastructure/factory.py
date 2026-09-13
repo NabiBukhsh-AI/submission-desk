@@ -144,6 +144,7 @@ def settings_from_env(**overrides: object) -> Settings:
         pilot_data_dir=os.environ.get("PILOT_DATA_DIR") or "",
         source_adapter=(os.environ.get("SOURCE_ADAPTER") or "local").strip().lower(),
         google_credentials_path=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip(),
+        google_credentials_json=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON", "").strip(),
         drive_folder_id=os.environ.get("DRIVE_FOLDER_ID", "").strip(),
         sheets_spreadsheet_id=os.environ.get("SHEETS_SPREADSHEET_ID", "").strip(),
         slack_bot_token=os.environ.get("SLACK_BOT_TOKEN", "").strip(),
@@ -454,9 +455,20 @@ def build_source(settings: Settings) -> object:
     if settings.demo_mode:
         return LocalFolderSource(DEMO_CORPUS)
     if settings.source_adapter == "drive":
-        account = ServiceAccount(settings.google_credentials_path, drive.SCOPE)
+        account = service_account(settings, drive.SCOPE)
         return drive.DriveSource(DriveHttpTransport(account), folder_id=settings.drive_folder_id)
     return LocalFolderSource(inbox_for(settings))
+
+
+def has_google_key(settings: Settings) -> bool:
+    """Either form of the key is configured; neither is read here."""
+    return bool(settings.google_credentials_path or settings.google_credentials_json)
+
+
+def service_account(settings: Settings, scope: str) -> ServiceAccount:
+    return ServiceAccount(
+        settings.google_credentials_path, scope, key_json=settings.google_credentials_json
+    )
 
 
 def build_sinks(settings: Settings) -> tuple[object, ...]:
@@ -473,8 +485,8 @@ def build_sinks(settings: Settings) -> tuple[object, ...]:
     if settings.demo_mode:
         return ()
     sinks: list[object] = [CsvSink(Path(settings.blob_dir).parent / "deliveries" / "results.csv")]
-    if settings.sheets_spreadsheet_id and settings.google_credentials_path:
-        account = ServiceAccount(settings.google_credentials_path, sheets.SCOPE)
+    if settings.sheets_spreadsheet_id and has_google_key(settings):
+        account = service_account(settings, sheets.SCOPE)
         sinks.append(
             sheets.SheetsSink(
                 SheetsHttpTransport(account), spreadsheet_id=settings.sheets_spreadsheet_id

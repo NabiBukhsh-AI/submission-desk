@@ -163,6 +163,32 @@ def test_a_missing_key_file_says_which_variable(tmp_path: Path) -> None:
 # --- Drive -------------------------------------------------------------------------------------
 
 
+def test_the_key_can_arrive_as_the_files_contents(key_file: Path) -> None:
+    """A host with environment variables and no file mount pastes the JSON
+    itself; it wins over a path, and a path that is not there does not matter."""
+    http = _Http((200, {"access_token": "ya29.inline", "expires_in": 3600}))
+    account = google_auth.ServiceAccount(
+        key_file.parent / "absent.json", "scope", key_json=key_file.read_text(), urlopen=http
+    )
+
+    assert account.token(now=0) == "ya29.inline"
+    assert account.email == "desk@example-project.iam.gserviceaccount.com"
+
+
+def test_pasted_json_that_is_not_json_says_so() -> None:
+    account = google_auth.ServiceAccount("", "scope", key_json="{not json", urlopen=_Http())
+
+    with pytest.raises(google_auth.GoogleAuthError, match="not valid JSON"):
+        account.token()
+
+
+def test_no_key_at_all_names_both_settings() -> None:
+    account = google_auth.ServiceAccount("", "scope", urlopen=_Http())
+
+    with pytest.raises(google_auth.GoogleAuthError, match="GOOGLE_APPLICATION_CREDENTIALS_JSON"):
+        account.token()
+
+
 def _account(key_file: Path, http: _Http) -> google_auth.ServiceAccount:
     account = google_auth.ServiceAccount(key_file, "scope", urlopen=http)
     account._token, account._expires_at = "ya29.test", 10**12

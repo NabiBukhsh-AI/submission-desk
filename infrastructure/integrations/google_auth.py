@@ -6,8 +6,10 @@ key (RS256), post it to the token endpoint, keep the token until it expires.
 Standard library HTTP and the ``cryptography`` package this project already
 carries for sealing keys; no Google client library to version.
 
-The key file is read at the point of use, never at import, and its contents
-never appear in a log or an error message.
+The key is read at the point of use, never at import, and its contents never
+appear in a log or an error message. It comes from a file, or — for a host
+that offers environment variables but no reliable file mount — from the JSON
+itself in ``GOOGLE_APPLICATION_CREDENTIALS_JSON``.
 """
 
 from __future__ import annotations
@@ -66,8 +68,16 @@ def signed_assertion(key: dict[str, Any], scope: str, *, now: float | None = Non
 class ServiceAccount:
     """A bearer token for one scope, refreshed when it is about to expire."""
 
-    def __init__(self, key_path: str | Path, scope: str, *, urlopen: Any = None) -> None:
-        self.key_path = Path(key_path)
+    def __init__(
+        self,
+        key_path: str | Path,
+        scope: str,
+        *,
+        key_json: str = "",
+        urlopen: Any = None,
+    ) -> None:
+        self.key_path = Path(key_path) if key_path else None
+        self.key_json = key_json
         self.scope = scope
         self._urlopen = urlopen or urllib.request.urlopen
         self._token = ""
@@ -79,17 +89,31 @@ class ServiceAccount:
         return str(self._key().get("client_email", ""))
 
     def _key(self) -> dict[str, Any]:
-        try:
-            data = json.loads(self.key_path.read_text(encoding="utf-8"))
-        except FileNotFoundError as missing:
+        if self.key_json:
+            try:
+                data = json.loads(self.key_json)
+            except ValueError as broken:
+                raise GoogleAuthError(
+                    "GOOGLE_APPLICATION_CREDENTIALS_JSON is not valid JSON. Paste the "
+                    "whole key file, unchanged."
+                ) from broken
+        elif self.key_path is None:
             raise GoogleAuthError(
-                "The service-account key file named by GOOGLE_APPLICATION_CREDENTIALS "
-                "does not exist."
-            ) from missing
-        except (OSError, ValueError) as broken:
-            raise GoogleAuthError(
-                "The service-account key file could not be read as JSON."
-            ) from broken
+                "No service-account key is configured. Set GOOGLE_APPLICATION_CREDENTIALS "
+                "to the key file, or GOOGLE_APPLICATION_CREDENTIALS_JSON to its contents."
+            )
+        else:
+            try:
+                data = json.loads(self.key_path.read_text(encoding="utf-8"))
+            except FileNotFoundError as missing:
+                raise GoogleAuthError(
+                    "The service-account key file named by GOOGLE_APPLICATION_CREDENTIALS "
+                    "does not exist."
+                ) from missing
+            except (OSError, ValueError) as broken:
+                raise GoogleAuthError(
+                    "The service-account key file could not be read as JSON."
+                ) from broken
         if not isinstance(data, dict) or "private_key" not in data or "client_email" not in data:
             raise GoogleAuthError("The service-account key file is not a Google key file.")
         return data

@@ -604,24 +604,23 @@ async def upload(
     if role_id not in {role.role_id for role in rubrics.list_roles(wired)}:
         raise HTTPException(422, f"There is no role called {role_id!r}.")
 
-    inbox = Path(wired.settings.blob_dir).parent / "inbox"
-    inbox.mkdir(parents=True, exist_ok=True)
-
     grouped: dict[str, list[DocumentRef]] = {}
     for upload_file, candidate_id in zip(files, candidate_ids, strict=True):
         payload = await upload_file.read()
         name = candidate_id.strip() or "candidate"
         refs = grouped.setdefault(name, [])
-        # Written under the candidate id rather than the uploaded name: a
-        # filename from outside never decides where bytes land.
-        target = inbox / f"{name}-{len(refs)}{Path(upload_file.filename or '').suffix}"
-        target.write_bytes(payload)
+        # Into the content-addressed store, under its hash, and referenced by
+        # that hash: intake reads it from there whatever the configured source
+        # is, so an upload works the same whether the source is a folder or a
+        # Drive account. A filename from outside never decides where bytes land.
+        digest = wired.blobs.put(payload)
         refs.append(
             DocumentRef(
                 candidate_id=name,
-                filename=upload_file.filename or target.name,
-                external_ref=str(target),
+                filename=upload_file.filename or f"{name}-{len(refs)}",
+                external_ref=f"upload:{digest}",
                 size_bytes=len(payload),
+                metadata={"sha256": digest},
             )
         )
 

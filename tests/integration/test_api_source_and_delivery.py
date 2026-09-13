@@ -10,6 +10,7 @@ adapters and never an id; demo mode refuses both.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from uuid import uuid4
@@ -76,6 +77,50 @@ def test_health_names_the_adapters_and_nothing_else(client: tuple[TestClient, De
     assert body["sinks"] == ["csv"]
     assert body["notifier"] == "console"
     assert not any(key.endswith("_id") or "token" in key for key in body)
+
+
+# --- uploading, whatever the source is ---------------------------------------------------------
+
+
+class _RemoteOnly:
+    """A source that can list its own folder and nothing else — what Drive is
+    to a file somebody uploaded through the page."""
+
+    source_id = "drive"
+    folder_id = "shared-folder"
+
+    def list_candidates(self, limit: int = 50) -> list[CandidateRef]:
+        return []
+
+    def fetch(self, ref: DocumentRef) -> bytes:
+        raise SourceUnavailable("Access to Google Drive was refused.")
+
+
+def test_an_upload_is_read_from_the_store_not_the_source(
+    client: tuple[TestClient, Deps], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The defect this guards: with the source switched to Drive, an upload
+    through the page was handed to the Drive adapter to fetch by local path,
+    which it refused, and every uploaded candidate failed at intake."""
+    http, deps = client
+    monkeypatch.setattr(api_module, "_deps", Deps(**{**deps.__dict__, "source": _RemoteOnly()}))
+
+    response = http.post(
+        "/api/uploads",
+        files=[("files", ("ana.pdf", pdfs.text_pdf(CV), "application/pdf"))],
+        data={"candidate_ids": ["ana"], "role_id": "ai-engineer"},
+    )
+
+    assert response.status_code == 202
+    for _ in range(600):  # the batch runs on a thread
+        rows = http.get("/api/runs", params={"filter": "Everything"}).json()
+        if rows and rows[0]["status"] not in ("created", "intake_ok", "extracted", "sanitized"):
+            break
+        time.sleep(0.1)
+    [row] = rows
+    assert row["candidate_id"] == "ana"
+    assert row["status"] != "failed_terminal", row
+    assert deps.candidates.documents_for_run(row["run_id"])
 
 
 # --- pulling --------------------------------------------------------------------------------

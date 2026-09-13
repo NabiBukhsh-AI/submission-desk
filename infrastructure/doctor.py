@@ -50,6 +50,9 @@ CREDENTIALS = {
     "SLACK_BOT_TOKEN": "Slack",
 }
 
+#: A credential that may arrive under another name. Presence of either counts.
+ALTERNATIVES = {"GOOGLE_APPLICATION_CREDENTIALS": "GOOGLE_APPLICATION_CREDENTIALS_JSON"}
+
 
 class Level(str, Enum):
     PASS = "pass"
@@ -262,13 +265,14 @@ def check_credentials(settings: Any = None) -> list[Check]:
     ]
 
     for variable, what in CREDENTIALS.items():
-        present = bool(os.environ.get(variable, "").strip())
+        names = (variable, *filter(None, (ALTERNATIVES.get(variable),)))
+        present = any(os.environ.get(name, "").strip() for name in names)
         checks.append(
             Check(
                 f"credential: {what}",
                 Level.PASS if present else Level.WARN,
                 "set" if present else "not set",
-                "" if present else f"Optional. Set {variable} to enable {what}.",
+                "" if present else f"Optional. Set {' or '.join(names)} to enable {what}.",
             )
         )
 

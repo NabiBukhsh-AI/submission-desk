@@ -50,14 +50,15 @@ services:
       # The integrations. Leave every one of these unset and the service reads
       # its inbox, writes a CSV and logs notifications. To switch them on, add
       # the values in the dashboard (Environment): the four ids and tokens as
-      # environment variables, the Google key as a Secret File at the path
-      # below. PUBLIC_URL is the link in each Slack message; RENDER_EXTERNAL_URL,
-      # which Render sets itself, is used when it is absent.
+      # environment variables, and the Google key file's contents as one more
+      # (a file path would need a mount the container does not have). PUBLIC_URL
+      # is the link in each Slack message; RENDER_EXTERNAL_URL, which Render
+      # sets itself, is used when it is absent.
       #
       # - key: SOURCE_ADAPTER
       #   value: drive
-      # - key: GOOGLE_APPLICATION_CREDENTIALS
-      #   value: /etc/secrets/service-account.json
+      # - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+      #   sync: false          # the key file's contents, pasted whole
       # - key: DRIVE_FOLDER_ID
       #   sync: false
       # - key: SHEETS_SPREADSHEET_ID

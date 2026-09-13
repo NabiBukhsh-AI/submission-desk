@@ -71,6 +71,9 @@ class Settings:
     #: service-account key file and a folder for Drive, a spreadsheet for
     #: Sheets, a bot token and a channel for Slack.
     google_credentials_path: str = ""
+    #: The key file's contents, for a host with environment variables and no
+    #: file mount. Wins over the path when both are set.
+    google_credentials_json: str = ""
     drive_folder_id: str = ""
     sheets_spreadsheet_id: str = ""
     slack_bot_token: str = ""
