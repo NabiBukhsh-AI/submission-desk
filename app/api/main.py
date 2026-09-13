@@ -17,6 +17,7 @@ deployment's: the cookie is marked secure when the request arrived over HTTPS.
 
 from __future__ import annotations
 
+import sys
 import threading
 from pathlib import Path
 from typing import Annotated, Any
@@ -81,6 +82,10 @@ def deps() -> Deps:
     if _deps is None:
         _deps = build_deps(settings_from_env())
         reconcile(_deps)
+        # A fixed admin account from the environment, before the first request.
+        problem = admin.ensure_admin(_deps)
+        if problem:
+            print(problem, file=sys.stderr)
     return _deps
 
 

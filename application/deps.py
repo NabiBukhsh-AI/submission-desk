@@ -96,6 +96,11 @@ class Settings:
     retention_days: int = 30
     extraction_confidence_warn: float = 0.6
     reviewer_id: str = ""
+    #: A fixed admin account from the environment. When both are set the
+    #: account exists with these credentials before the first request, so
+    #: a deployment whose disk is wiped on deploy needs no setup visit.
+    admin_username: str = ""
+    admin_password: str = ""
     log_spans: bool = False
 
     #: Which tier each call site starts at. The routing policy may raise this;

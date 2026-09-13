@@ -21,14 +21,30 @@ services:
     envVars:
       - key: APP_SECRET
         generateValue: true
+      # The account, the reviewer and the model key from the environment, so
+      # nothing has to be re-entered after a deploy wipes the free tier's
+      # disk. `sync: false` values are typed into the Render dashboard once,
+      # never into this file.
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: REVIEWER_ID
+        value: admin
+      - key: MODEL_PROVIDER
+        value: anthropic
+      - key: MODEL_API_KEY
+        sync: false
+      - key: MODEL_CHEAP_ID
+        value: claude-haiku-4-5
+      - key: MODEL_STRONG_ID
+        value: claude-haiku-4-5
       - key: DATABASE_PATH
         value: /var/data/db/submission_desk.sqlite
       - key: BLOB_DIR
         value: /var/data/blobs
       - key: LOG_DIR
         value: /var/data/logs
-      - key: MODEL_PROVIDER
-        value: fake
       - key: BLIND_MODE
         value: "true"
     # Paid plans only. Uncomment for a database that survives deploys.

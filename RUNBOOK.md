@@ -77,6 +77,13 @@ interface; a lost password is reset by deleting the `admin_username` and
 `admin_password_hash` rows from the `settings` table, after which the next
 visitor creates the account again.
 
+To skip the setup visit — a hosted copy, or a machine that is reinstalled —
+set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in the environment: the account
+exists with those credentials before the first request, and if the stored
+account ever differs (a wiped disk, a rotated password) it is brought back
+into line at start. A password under ten characters is refused, with a line
+in the log, and the setup form appears instead.
+
 **Settings** in the top bar is the admin page: the provider, its API key, the
 model per tier and its prices, the reviewer id, blind mode and retention. What
 is saved there is laid over the environment and takes effect on the next
@@ -309,19 +316,21 @@ One container: the API, the built interface served from the same origin, and
 Tesseract. `render.yaml` is the blueprint.
 
 1. Push the repository. In Render: **New → Blueprint**, pick the repository,
-   accept the service it finds. The first build takes about five minutes.
-2. Open the service URL. The first visit creates the admin account.
-3. **Settings** → Anthropic → paste the key → **Test the connection**. Set the
-   reviewer id. Upload a CV.
+   accept the service it finds. It asks for the two values marked
+   `sync: false`: `ADMIN_PASSWORD` (ten characters or more) and
+   `MODEL_API_KEY`. The first build takes about five minutes.
+2. Open the service URL and sign in as `admin` with that password. The
+   reviewer id, the provider and the models are already set from the
+   environment; **Settings → Test the connection** confirms the key.
+3. Upload a CV.
 
 What the free plan does and does not do: the service sleeps after fifteen
 minutes idle (the first request wakes it, slowly) and its filesystem is
-wiped on every deploy — the database, uploaded documents and the saved key
-start over; the sample candidates are re-created at start. `APP_SECRET` is
-generated once by Render and kept, so a saved key stays readable across
-restarts within one deploy. For data that survives deploys, a paid plan
-with the disk block in `render.yaml` uncommented: the paths already point
-at `/var/data`.
+wiped on every deploy — the database and uploaded documents start over; the
+sample candidates are re-created at start. Because the account, the reviewer
+and the key come from the environment, nothing has to be re-entered. For
+data that survives deploys, a paid plan with the disk block in `render.yaml`
+uncommented: the paths already point at `/var/data`.
 
 The same image runs anywhere Docker does:
 

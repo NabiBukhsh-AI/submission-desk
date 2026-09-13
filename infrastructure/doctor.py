@@ -45,6 +45,7 @@ MAX_STACK_DEPTH = 4
 #: the value is never read, logged, or echoed. The model key is checked
 #: separately because the admin page can set it too.
 CREDENTIALS = {
+    "ADMIN_PASSWORD": "the fixed admin account",
     "GOOGLE_APPLICATION_CREDENTIALS": "Google Drive and Sheets",
     "SLACK_BOT_TOKEN": "Slack",
 }

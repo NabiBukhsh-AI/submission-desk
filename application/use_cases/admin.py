@@ -73,6 +73,34 @@ def create_admin(deps: Deps, username: str, password: str) -> None:
     deps.settings_store.set(ADMIN_PASSWORD_HASH, deps.secrets.hash_password(password))
 
 
+def ensure_admin(deps: Deps) -> str | None:
+    """Make the environment's admin account the account, if one is configured.
+
+    ``ADMIN_USERNAME`` and ``ADMIN_PASSWORD`` are authoritative when both are
+    set: a missing account is created, and a stored one that differs is
+    brought into line, so a redeploy that wiped the database or a rotated
+    password both end in the same place. Returns a sentence when the
+    configuration cannot be honoured, for the log; never raises, because a
+    bad password in the environment should not take the API down.
+    """
+    username = deps.settings.admin_username.strip()
+    password = deps.settings.admin_password
+    if not username or not password:
+        return None
+    if len(password) < MIN_PASSWORD_CHARS:
+        return (
+            f"ADMIN_PASSWORD is shorter than {MIN_PASSWORD_CHARS} characters; the account was "
+            "not created from the environment."
+        )
+    stored_name = deps.settings_store.get(ADMIN_USERNAME)
+    stored_hash = deps.settings_store.get(ADMIN_PASSWORD_HASH) or ""
+    if stored_name == username and deps.secrets.verify_password(password, stored_hash):
+        return None
+    deps.settings_store.set(ADMIN_USERNAME, username)
+    deps.settings_store.set(ADMIN_PASSWORD_HASH, deps.secrets.hash_password(password))
+    return None
+
+
 def login(deps: Deps, username: str, password: str, *, now: float | None = None) -> str:
     """A session token, or a refusal that does not say which half was wrong."""
     stored_name = deps.settings_store.get(ADMIN_USERNAME)

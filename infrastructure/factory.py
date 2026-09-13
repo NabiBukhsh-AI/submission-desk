@@ -126,6 +126,8 @@ def settings_from_env(**overrides: object) -> Settings:
         assess_max_input_tokens=number("ASSESS_MAX_INPUT_TOKENS", 12_000),
         structure_max_input_tokens=number("STRUCTURE_MAX_INPUT_TOKENS", 24_000),
         reviewer_id=os.environ.get("REVIEWER_ID") or "",
+        admin_username=os.environ.get("ADMIN_USERNAME", "").strip(),
+        admin_password=os.environ.get("ADMIN_PASSWORD", ""),
         log_spans=flag("LOG_SPANS", False),
         sanitize_render_diff=flag("SANITIZE_RENDER_DIFF", True),
         render_diff_max_pages=number("RENDER_DIFF_MAX_PAGES", 10),

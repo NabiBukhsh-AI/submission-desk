@@ -14,12 +14,14 @@ in the tests and are credentials for nothing.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api import main as api_module
+from application.deps import Deps
 from application.use_cases import admin
 from infrastructure.factory import build_deps, settings_from_env
 from infrastructure.secrets import LocalSecrets
@@ -326,3 +328,75 @@ def test_app_secret_is_generated_once_and_reused(
     assert app_secret(db) == first
     monkeypatch.setenv("APP_SECRET", "from-the-environment")
     assert app_secret(db) == "from-the-environment"
+
+
+# --- a fixed account from the environment -------------------------------------------------
+
+
+def _with_admin(tmp_path: Path, username: str, password: str) -> Deps:
+    settings = settings_from_env(
+        db_path=str(tmp_path / "fixed.sqlite"),
+        blob_dir=str(tmp_path / "b"),
+        admin_username=username,
+        admin_password=password,
+    )
+    return build_deps(settings)
+
+
+def test_the_environment_can_fix_the_account(tmp_path: Path) -> None:
+    """A deployment whose disk is wiped on deploy needs no setup visit."""
+    deps = _with_admin(tmp_path, "admin", "a fixed password")
+    try:
+        assert admin.ensure_admin(deps) is None
+        assert admin.setup_required(deps) is False
+        assert admin.login(deps, "admin", "a fixed password")
+        with pytest.raises(admin.AdminRefused):
+            admin.create_admin(deps, "other", "somebody else's")
+    finally:
+        close_thread_connection(deps.settings.db_path)
+
+
+def test_a_rotated_environment_password_wins(tmp_path: Path) -> None:
+    deps = _with_admin(tmp_path, "admin", "the first password")
+    try:
+        admin.ensure_admin(deps)
+        rotated = Deps(
+            **{**deps.__dict__, "settings": replace(deps.settings, admin_password="the second one")}
+        )
+        assert admin.ensure_admin(rotated) is None
+        assert admin.login(rotated, "admin", "the second one")
+        with pytest.raises(admin.AdminRefused):
+            admin.login(rotated, "admin", "the first password")
+    finally:
+        close_thread_connection(deps.settings.db_path)
+
+
+def test_a_short_environment_password_is_refused_with_a_sentence(tmp_path: Path) -> None:
+    deps = _with_admin(tmp_path, "admin", "short")
+    try:
+        problem = admin.ensure_admin(deps)
+        assert problem is not None and "10 characters" in problem
+        assert admin.setup_required(deps) is True
+    finally:
+        close_thread_connection(deps.settings.db_path)
+
+
+def test_the_api_signs_in_the_fixed_account_without_setup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = settings_from_env(db_path=str(tmp_path / "f.sqlite"), blob_dir=str(tmp_path / "b"))
+    monkeypatch.setenv("DATABASE_PATH", settings.db_path)
+    monkeypatch.setenv("BLOB_DIR", settings.blob_dir)
+    monkeypatch.setenv("ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("ADMIN_PASSWORD", "correct horse battery")
+    monkeypatch.setattr(api_module, "_deps", None)
+    http = TestClient(api_module.app)
+    try:
+        assert http.get("/api/auth/status").json() == {"setup_required": False, "user": None}
+        login = http.post(
+            "/api/auth/login", json={"username": "admin", "password": "correct horse battery"}
+        )
+        assert login.status_code == 200
+        assert http.get("/api/runs").status_code == 200
+    finally:
+        close_thread_connection(settings.db_path)
