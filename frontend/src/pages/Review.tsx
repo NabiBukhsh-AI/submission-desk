@@ -7,11 +7,10 @@ import { navigate } from '@/lib/router'
 import { useVocabulary } from '@/lib/vocabulary'
 import { Decision } from '@/components/Decision'
 import { Evidence } from '@/components/Evidence'
+import { Glossary, Outcome } from '@/components/Outcome'
 import { StatusChip } from '@/components/StatusChip'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Progress } from '@/components/ui/progress'
-import { ApiError, api, type Detail, type Health, type Recommendation, type Report } from '@/lib/api'
+import { ApiError, api, type Detail, type Health, type Report } from '@/lib/api'
 
 export function Review({ runId, health }: { runId: string; health: Health | null }) {
   const [detail, setDetail] = useState<Detail | null>(null)
@@ -85,7 +84,7 @@ export function Review({ runId, health }: { runId: string; health: Health | null
       <IntegrityBanner tier={banner.tier} message={banner.message} reports={reports} />
 
       {recommendation ? (
-        <RecommendationPanel recommendation={recommendation} rubric={rubric} />
+        <Outcome run={run} recommendation={recommendation} rubric={rubric} assessments={assessments} />
       ) : (
         <Alert>
           <TriangleAlert aria-hidden="true" />
@@ -121,6 +120,8 @@ export function Review({ runId, health }: { runId: string; health: Health | null
         health={health}
         openedAt={openedAt}
       />
+
+      <Glossary />
     </article>
   )
 }
@@ -170,87 +171,5 @@ function IntegrityBanner({ tier, message, reports }: { tier: string; message: st
         </AlertDescription>
       )}
     </Alert>
-  )
-}
-
-function RecommendationPanel({ recommendation, rubric }: { recommendation: Recommendation; rubric: Detail['rubric'] }) {
-  const vocabulary = useVocabulary()
-  const bandLabel = vocabulary?.bands[recommendation.band] ?? recommendation.band
-  const insufficient = recommendation.band === 'insufficient_information'
-  const byId = Object.fromEntries(rubric.criteria.map((item) => [item.id, item]))
-
-  return (
-    <section aria-labelledby="recommendation-heading" className="rounded-lg border bg-card p-5">
-      {insufficient ? (
-        <Alert className="border-warning/50 bg-warning/10">
-          <TriangleAlert className="text-warning" aria-hidden="true" />
-          <AlertTitle id="recommendation-heading">
-            {bandLabel} — the documents did not cover enough of this role to score.
-          </AlertTitle>
-        </Alert>
-      ) : (
-        <h2 id="recommendation-heading" className="text-xl font-semibold">
-          {bandLabel}
-        </h2>
-      )}
-
-      {recommendation.score !== null ? (
-        <div className="mt-3">
-          <Progress value={Math.min(Math.max(recommendation.score, 0), 1) * 100} aria-label="Score" />
-          <p className="mt-1 text-sm text-muted-foreground">
-            Score {recommendation.score.toFixed(2)} of 1.00
-          </p>
-        </div>
-      ) : (
-        // Never a zero. A zero reads as "scored badly"; the honest statement
-        // is that no score was produced.
-        <p className="mt-3 text-sm text-muted-foreground">
-          No score was produced, because there was not enough to judge.
-        </p>
-      )}
-
-      {recommendation.requires_human && (
-        <Alert className="mt-4">
-          <TriangleAlert aria-hidden="true" />
-          <AlertTitle>This one wants a person's judgement.</AlertTitle>
-          <AlertDescription>
-            <ul className="list-disc pl-4">
-              {recommendation.requires_human_reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <h3 className="mt-5 font-medium">How this was worked out</h3>
-      <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
-        {recommendation.derivation.map((step, index) => (
-          <li key={index}>{step.description}</li>
-        ))}
-      </ol>
-
-      <Accordion type="single" collapsible className="mt-4">
-        <AccordionItem value="states">
-          <AccordionTrigger>Point by point</AccordionTrigger>
-          <AccordionContent>
-            <ul className="space-y-1 text-sm">
-              {Object.entries(recommendation.criterion_states).map(([criterionId, state]) => {
-                const criterion = byId[criterionId]
-                return (
-                  <li key={criterionId} className="flex flex-wrap justify-between gap-2">
-                    <span>
-                      <strong>{criterion?.label ?? criterionId}</strong>
-                      {criterion && <span className="text-muted-foreground"> · weight {criterion.weight}</span>}
-                    </span>
-                    <span>{vocabulary?.states[state] ?? state}</span>
-                  </li>
-                )
-              })}
-            </ul>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </section>
   )
 }

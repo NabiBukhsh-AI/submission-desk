@@ -48,12 +48,31 @@ export type Vocabulary = {
   severities: Record<string, string>
   filters: Record<string, string[]>
   empty: Record<string, string>
+  // Definitions: every word the review page uses, in the API's sentences.
+  band_help: Record<string, string>
+  state_help: Record<string, string>
+  kinds: Record<string, string>
+  span_validation: Record<string, string>
+  human_reasons: Record<string, { title: string; meaning: string; action: string }>
+  glossary: { term: string; definition: string }[]
 }
 
 export type RunRow = {
   run_id: string
   candidate_id: string
   role_id: string
+  rubric_version: string
+  blind_mode: boolean
+  total_input_tokens: number
+  total_output_tokens: number
+  cached_input_tokens: number
+  total_cost_usd: string | null
+  llm_call_count: number
+  repair_count: number
+  escalation_count: number
+  invalid_span_count: number
+  coverage: number | null
+  score: number | null
   status: string
   started_at: string
   finished_at: string | null
@@ -101,6 +120,7 @@ export type Criterion = {
   question: string
   weight: number
   kind: 'standard' | 'high_stakes' | 'blocker'
+  min_supported: number
 }
 
 export type Rubric = {
@@ -108,10 +128,17 @@ export type Rubric = {
   role_title: string
   version: string
   criteria: Criterion[]
+  bands: { band: string; min_score: number }[]
+  min_coverage: number
   notes_for_reviewer: string | null
 }
 
-export type DerivationStep = { rule_id: string; description: string }
+export type DerivationStep = {
+  rule_id: string
+  description: string
+  inputs: Record<string, unknown>
+  output: string
+}
 
 export type Recommendation = {
   band: string

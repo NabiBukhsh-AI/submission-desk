@@ -29,11 +29,17 @@ from pydantic import BaseModel
 from app.components.status_chip import BAND_LABELS, CHIPS, band_label, chip_for
 from app.passages import passage_around, source_for
 from app.vocabulary import (
+    BAND_HELP,
     DETECTOR_LABELS,
     EMPTY_MESSAGES,
+    GLOSSARY,
+    HUMAN_REASONS,
+    KIND_HELP,
     QUEUE_FILTERS,
     REASON_LABELS,
     SEVERITY_LABELS,
+    SPAN_VALIDATION_HELP,
+    STATE_HELP,
     STATE_LABELS,
 )
 from application.deps import Deps
@@ -319,6 +325,12 @@ def vocabulary(_user: str = Guarded) -> dict[str, Any]:
         "bands": {band.value: label for band, label in BAND_LABELS.items()},
         "states": {state.value: label for state, label in STATE_LABELS.items()},
         "reasons": {reason.value: label for reason, label in REASON_LABELS.items()},
+        "band_help": {band.value: text for band, text in BAND_HELP.items()},
+        "state_help": {state.value: text for state, text in STATE_HELP.items()},
+        "kinds": {kind.value: text for kind, text in KIND_HELP.items()},
+        "span_validation": {check.value: text for check, text in SPAN_VALIDATION_HELP.items()},
+        "human_reasons": HUMAN_REASONS,
+        "glossary": GLOSSARY,
         "detectors": DETECTOR_LABELS,
         "severities": {severity.value: label for severity, label in SEVERITY_LABELS.items()},
         "filters": {

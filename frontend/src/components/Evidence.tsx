@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { api, type Assessment, type EvidenceItem, type Passage, type Rubric } from '@/lib/api'
 
+const KIND_LABEL: Record<string, string> = { standard: 'Standard', high_stakes: 'High stakes', blocker: 'Blocker' }
+
 const EVIDENCE_STATE: Record<EvidenceItem['state'], string> = {
   supported: 'Supports',
   contradicted: 'Contradicts',
@@ -38,18 +40,39 @@ export function Evidence({
             .filter((item) => !blockers.includes(item.criterion_id))
             .map((assessment) => {
               const criterion = byId[assessment.criterion_id]
+              const found = assessment.evidence.filter((item) => item.verbatim_span).length
               return (
                 <AccordionItem key={assessment.criterion_id} value={assessment.criterion_id}>
                   <AccordionTrigger className="gap-3">
                     <span className="flex flex-1 flex-wrap items-center justify-between gap-2 text-left">
-                      <span>{criterion?.label ?? assessment.criterion_id}</span>
+                      <span>
+                        <span className="block">{criterion?.label ?? assessment.criterion_id}</span>
+                        {criterion && (
+                          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                            {KIND_LABEL[criterion.kind] ?? criterion.kind} · weight {criterion.weight} · {found} of{' '}
+                            {criterion.min_supported} quotation{criterion.min_supported === 1 ? '' : 's'} needed
+                          </span>
+                        )}
+                      </span>
                       <Badge variant="outline">
                         {vocabulary?.states[assessment.resolved_state] ?? assessment.resolved_state}
                       </Badge>
                     </span>
                   </AccordionTrigger>
                   <AccordionContent>
-                    {criterion && <p className="mb-3 text-sm text-muted-foreground">{criterion.question}</p>}
+                    {criterion && <p className="mb-2 text-sm text-muted-foreground">{criterion.question}</p>}
+                    <p className="mb-3 rounded-md bg-muted/60 px-3 py-2 text-sm">
+                      <strong>{vocabulary?.states[assessment.resolved_state] ?? assessment.resolved_state}.</strong>{' '}
+                      {vocabulary?.state_help[assessment.resolved_state]}
+                      {assessment.unassessed_reason && (
+                        <>
+                          {' '}
+                          This point could not be assessed ({assessment.unassessed_reason.replaceAll('_', ' ')}); read
+                          the document for it yourself.
+                        </>
+                      )}
+                      <span className="ml-1 font-mono text-[11px] text-muted-foreground">{assessment.resolution_rule_id}</span>
+                    </p>
                     {assessment.evidence.length === 0 && (
                       <p className="text-sm text-muted-foreground">
                         Nothing in the documents addressed this point.
@@ -129,6 +152,7 @@ function Quotation({ text }: { text: string }) {
 }
 
 function EvidenceCard({ runId, item, rejected = false }: { runId: string; item: EvidenceItem; rejected?: boolean }) {
+  const vocabulary = useVocabulary()
   const [passage, setPassage] = useState<Passage | null>(null)
   const [loading, setLoading] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
@@ -151,10 +175,18 @@ function EvidenceCard({ runId, item, rejected = false }: { runId: string; item: 
             {rejected ? 'Not found in the document' : EVIDENCE_STATE[item.state]}
           </Badge>
           {item.provenance && <span>page {item.provenance.page_start}</span>}
-          <span>confidence {Math.round(item.confidence * 100)}%</span>
+          <span title="The model's own confidence in this item, 0 to 100. Recorded, not used for scoring.">
+            confidence {Math.round(item.confidence * 100)}%
+          </span>
         </span>
       </div>
       {item.verbatim_span && <Quotation text={item.verbatim_span} />}
+      {item.verbatim_span && (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          <span className="font-medium">Checked: </span>
+          {vocabulary?.span_validation[item.span_validation] ?? item.span_validation.replaceAll('_', ' ')}
+        </p>
+      )}
       {item.verbatim_span && !rejected && (
         <div className="mt-2">
           {passage ? (

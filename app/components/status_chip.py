@@ -96,6 +96,7 @@ BAND_LABELS: dict[Band, str] = {
     Band.HOLD: "Hold",
     Band.DECLINE: "Decline",
     Band.INSUFFICIENT_INFORMATION: "Not enough information",
+    Band.MANUAL_REVIEW_REQUIRED: "Check with the candidate first",
 }
 
 
