@@ -1,0 +1,195 @@
+# Flutter Mobile Developer.
+#
+# Same shape as ai-engineer.yaml, and the same rules: min_supported is how many
+# separate quotations a point needs before it counts, state_points is what each
+# outcome is worth, and insufficient_evidence is left out of the calculation
+# rather than counted as zero. Edit here; nothing in code names a criterion.
+
+role_id: flutter-mobile-developer
+role_title: Flutter Mobile Developer
+version: "1.0.0"
+
+min_coverage: 0.70
+blind_mode_default: true
+
+forbidden_attributes:
+  - age
+  - gender
+  - nationality
+  - ethnicity
+  - religion
+  - marital_status
+  - family_status
+  - disability
+  - personality
+  - culture_fit
+  - appearance
+
+notes_for_reviewer: >-
+  Every quotation below was checked against the source document before it was
+  shown to you. Anything the system could not verify was removed and is listed
+  separately.
+
+criteria:
+  - id: published-mobile-app
+    label: Has published a mobile app to real users
+    question: >-
+      Does the document show that this person shipped a mobile application
+      that was released on the App Store or Google Play, or distributed to
+      users outside their own team?
+    kind: high_stakes
+    weight: 5
+    min_supported: 2
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "published on Google Play"
+      - "released on the App Store"
+      - "N downloads"
+      - "live app with N users"
+    negative_examples:
+      - "personal project, not published"
+      - "tutorial app"
+      - "prototype"
+
+  - id: flutter-depth
+    label: Substantial Flutter and Dart experience
+    question: >-
+      Does the document show Flutter and Dart used for real applications,
+      including state management, navigation, or platform integration, rather
+      than for coursework?
+    kind: high_stakes
+    weight: 5
+    min_supported: 2
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "built the Flutter app"
+      - "Riverpod, Bloc, Provider, GetX"
+      - "Flutter Web"
+      - "platform channels"
+      - "custom widgets"
+    negative_examples:
+      - "familiar with Flutter"
+      - "learned Dart"
+
+  - id: native-platform-integration
+    label: Integrates with native platform features
+    question: >-
+      Does the document show integration with device or platform features,
+      such as push notifications, camera, location, in-app purchases, or
+      native code through platform channels?
+    kind: standard
+    weight: 4
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "push notifications"
+      - "Firebase Cloud Messaging"
+      - "camera and gallery"
+      - "in-app purchases"
+      - "wrote a native plugin"
+    negative_examples:
+      - "used a package"
+
+  - id: backend-connectivity
+    label: Connects apps to backends soundly
+    question: >-
+      Does the document show integrating a mobile app with APIs or backend
+      services, including authentication, offline handling, or data
+      synchronisation?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "REST and GraphQL integration"
+      - "Firebase Auth"
+      - "offline-first"
+      - "local database with"
+      - "token refresh"
+
+  - id: release-and-store-operations
+    label: Owns releases and store operations
+    question: >-
+      Does the document show ownership of the release process, such as build
+      pipelines, code signing, store submissions, staged rollouts, or crash
+      monitoring?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "CI/CD with Codemagic or Fastlane"
+      - "store submission"
+      - "crash-free rate"
+      - "Crashlytics"
+      - "staged rollout"
+
+  - id: performance-and-quality
+    label: Measures and improves app quality
+    question: >-
+      Does the document show testing or performance work on a mobile app,
+      such as widget tests, integration tests, startup time, or frame rate
+      improvements?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "widget tests"
+      - "integration tests"
+      - "reduced app size"
+      - "improved startup time"
+      - "fixed jank"
+    negative_examples:
+      - "tested manually"
+
+  - id: ui-craft
+    label: Builds polished, accessible interfaces
+    question: >-
+      Does the document show attention to interface quality, such as
+      implementing designs faithfully, animations, responsive layouts, or
+      accessibility on mobile?
+    kind: standard
+    weight: 2
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "implemented Figma designs"
+      - "custom animations"
+      - "adaptive layouts for tablet"
+      - "accessibility labels"
+
+  - id: collaboration-and-communication
+    label: Works with designers, product, and other engineers
+    question: >-
+      Does the document show working across disciplines, such as with
+      designers or product managers, or explaining technical work to
+      non-engineers?
+    kind: standard
+    weight: 2
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "worked with the design team"
+      - "wrote the documentation"
+      - "presented to stakeholders"
+      - "mentored"
+
+  # A blocker decides the outcome on its own, so it asks a narrow, checkable
+  # question. It can never decline a candidate on silence: an unaddressed
+  # blocker routes the run to a person instead.
+  - id: work-authorisation-stated
+    label: States eligibility to work in the required location
+    question: >-
+      Does the document state the candidate's eligibility to work in the
+      location this role requires?
+    kind: blocker
+    weight: 1
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.0, not_met: 0.0, contradicted: 0.0}
+
+bands:
+  - {band: advance, min_score: 0.75}
+  - {band: advance_with_reservations, min_score: 0.60}
+  - {band: hold, min_score: 0.40}
+  - {band: decline, min_score: 0.0}

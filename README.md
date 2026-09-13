@@ -55,6 +55,10 @@ architecture test walks both.
   panel rather than dropped.
 - **Ten deterministic injection detectors** and a quarantine state that halts a
   run before any model call, at zero spend.
+- **Three roles as YAML** — AI Engineer, Full Stack Developer, Flutter Mobile
+  Developer — editable on the roles page, with every run recording the hash
+  of the rubric it was assessed under; candidates can be run again against
+  another role from their stored documents.
 - **A rule engine** in two pure functions with a printed derivation, property
   tests for monotonicity, blocker dominance and coverage dominance, and an
   override path that recomputes through the same functions.

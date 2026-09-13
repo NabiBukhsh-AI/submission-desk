@@ -1,13 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/lexend";
+@import "@fontsource-variable/source-sans-3";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
+    /* "Corporate Trust" pairing: Lexend for headings (designed for reading
+       ease), Source Sans 3 for everything else. Both self-hosted. */
+    --font-heading: 'Lexend Variable', 'Segoe UI', system-ui, sans-serif;
+    --font-sans: 'Source Sans 3 Variable', 'Segoe UI', system-ui, sans-serif;
     /* The document's own words are set in a serif so a quotation reads as the
        document speaking and not as interface copy. Native stack, no download. */
     --font-quote: Georgia, 'Times New Roman', serif;
@@ -64,10 +67,10 @@
     --card-foreground: oklch(0.208 0.042 265.75);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.208 0.042 265.75);
-    --primary: oklch(0.33 0.07 255);
+    --primary: oklch(0.546 0.215 262.9);
     --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.955 0.006 247.86);
-    --secondary-foreground: oklch(0.33 0.07 255);
+    --secondary: oklch(0.955 0.01 250);
+    --secondary-foreground: oklch(0.35 0.08 262);
     --muted: oklch(0.955 0.006 247.86);
     --muted-foreground: oklch(0.446 0.03 257);
     --accent: oklch(0.955 0.006 247.86);
@@ -79,21 +82,21 @@
     --warning-foreground: oklch(0.208 0.042 265.75);
     --border: oklch(0.92 0.008 247.86);
     --input: oklch(0.92 0.008 247.86);
-    --ring: oklch(0.33 0.07 255);
-    --chart-1: oklch(0.33 0.07 255);
+    --ring: oklch(0.546 0.215 262.9);
+    --chart-1: oklch(0.546 0.215 262.9);
     --chart-2: oklch(0.596 0.145 163);
     --chart-3: oklch(0.666 0.157 58);
     --chart-4: oklch(0.577 0.245 27.325);
     --chart-5: oklch(0.556 0 0);
-    --radius: 0.5rem;
+    --radius: 0.625rem;
     --sidebar: oklch(0.984 0.003 247.86);
     --sidebar-foreground: oklch(0.208 0.042 265.75);
-    --sidebar-primary: oklch(0.33 0.07 255);
+    --sidebar-primary: oklch(0.546 0.215 262.9);
     --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.955 0.006 247.86);
     --sidebar-accent-foreground: oklch(0.208 0.042 265.75);
     --sidebar-border: oklch(0.92 0.008 247.86);
-    --sidebar-ring: oklch(0.33 0.07 255);
+    --sidebar-ring: oklch(0.546 0.215 262.9);
 }
 
 .dark {
@@ -103,8 +106,8 @@
     --card-foreground: oklch(0.96 0.005 247.86);
     --popover: oklch(0.215 0.022 260);
     --popover-foreground: oklch(0.96 0.005 247.86);
-    --primary: oklch(0.78 0.08 250);
-    --primary-foreground: oklch(0.17 0.02 260);
+    --primary: oklch(0.72 0.15 258);
+    --primary-foreground: oklch(0.15 0.03 262);
     --secondary: oklch(0.27 0.02 260);
     --secondary-foreground: oklch(0.96 0.005 247.86);
     --muted: oklch(0.27 0.02 260);
@@ -118,20 +121,20 @@
     --warning-foreground: oklch(0.17 0.02 260);
     --border: oklch(1 0 0 / 12%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.78 0.08 250);
-    --chart-1: oklch(0.78 0.08 250);
+    --ring: oklch(0.72 0.15 258);
+    --chart-1: oklch(0.72 0.15 258);
     --chart-2: oklch(0.72 0.14 163);
     --chart-3: oklch(0.78 0.14 70);
     --chart-4: oklch(0.704 0.191 22.216);
     --chart-5: oklch(0.72 0.02 257);
     --sidebar: oklch(0.215 0.022 260);
     --sidebar-foreground: oklch(0.96 0.005 247.86);
-    --sidebar-primary: oklch(0.78 0.08 250);
+    --sidebar-primary: oklch(0.72 0.15 258);
     --sidebar-primary-foreground: oklch(0.17 0.02 260);
     --sidebar-accent: oklch(0.27 0.02 260);
     --sidebar-accent-foreground: oklch(0.96 0.005 247.86);
     --sidebar-border: oklch(1 0 0 / 12%);
-    --sidebar-ring: oklch(0.78 0.08 250);
+    --sidebar-ring: oklch(0.72 0.15 258);
 }
 
 @layer base {
@@ -145,7 +148,15 @@
     cursor: pointer;
     }
   html {
-    @apply font-sans;
+    @apply font-sans text-base antialiased;
+    }
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    }
+  p {
+    text-wrap: pretty;
     }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -154,3 +165,15 @@
     }
   }
 }
+/* A quiet wash behind the page: one radial of the primary at the top, so the
+   header and hero sit on something rather than on flat grey. */
+.page-wash {
+  background-image:
+    radial-gradient(60rem 24rem at 50% -8rem, color-mix(in oklch, var(--primary) 14%, transparent), transparent 70%);
+}
+.dark .page-wash {
+  background-image:
+    radial-gradient(60rem 24rem at 50% -8rem, color-mix(in oklch, var(--primary) 18%, transparent), transparent 70%);
+}
+/* The document's own words. */
+.quote { font-family: var(--font-quote); }

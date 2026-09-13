@@ -133,9 +133,27 @@ default; nothing is removed without `--yes`. Nothing schedules it.
 
 ### The rubric
 
-`rubrics/ai-engineer.yaml`, or the **Rubric** page. `make rubric-lint`
-validates every rubric and prints its hash. Candidates already assessed keep
-the rubric hash they were assessed under; the next run uses the new one.
+Three roles ship as files in `rubrics/`: `ai-engineer`, `fullstack-developer`
+and `flutter-mobile-developer`. `make rubric-lint` validates every file and
+prints its hash. Candidates already assessed keep the rubric hash they were
+assessed under; the next run uses the new one.
+
+**Roles** in the React interface shows each role as it is configured — every
+requirement with its question, kind, weight, the number of quotations it
+needs, and its examples; the coverage gate; the bands — and lets the admin
+edit it, add or remove requirements, or duplicate it as a new role. The whole
+rubric is validated before anything is stored (the same rules as the lint),
+so a half-edited role can never be run. A saved rubric lives in the database
+and wins over the file of the same name; **Reset to file** returns to the
+shipped version. "Show as YAML" renders the same rubric in the file's form.
+
+### Running candidates again
+
+In the queue, select candidates and choose a role: their stored documents go
+through the pipeline for that role, without uploading again. The same
+documents against the same role and configuration are recognised as already
+done rather than repeated; a different role, or a changed rubric, is a new
+run with its own hash.
 
 ## 4. The doctor, and each thing it can say
 

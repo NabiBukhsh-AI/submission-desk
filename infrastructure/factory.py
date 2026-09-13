@@ -445,8 +445,9 @@ def build_deps(settings: Settings | None = None, *, migrate_db: bool = True) -> 
     embedder = LocalEmbedder()
 
     # One rubric loader, shared by the pipeline and by the stand-in model that
-    # answers when no fixture is recorded, so both read the same criteria.
-    rubric_loader = RubricLoader(_repo_root() / "rubrics")
+    # answers when no fixture is recorded, so both read the same criteria. The
+    # admin page's saved rubrics come from the same store as its settings.
+    rubric_loader = RubricLoader(_repo_root() / "rubrics", store=settings_store)
     prompts = PromptRegistry.load(_repo_root() / "prompts")
     llm_cache = SqliteLlmCacheRepository(db_path)
 

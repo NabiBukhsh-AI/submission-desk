@@ -38,8 +38,9 @@ from app.vocabulary import (
 )
 from application.deps import Deps
 from application.recovery import reconcile
-from application.use_cases import admin
+from application.use_cases import admin, rubrics
 from application.use_cases.process_batch import process_batch
+from application.use_cases.reassess import candidates_from_runs
 from application.use_cases.recompute_recommendation import recompute
 from application.use_cases.submit_review import ReviewRejected, submit_review
 from domain.contracts.enums import ReviewAction
@@ -208,6 +209,71 @@ def admin_probe(_user: str = Guarded) -> list[dict[str, Any]]:
         }
         for result in admin.probe_provider(deps())
     ]
+
+
+# --- roles ------------------------------------------------------------------------------
+
+
+@app.get("/api/roles")
+def roles(_user: str = Guarded) -> list[dict[str, Any]]:
+    """Every role a candidate can be assessed against."""
+    return [role.__dict__ for role in rubrics.list_roles(deps())]
+
+
+@app.get("/api/admin/rubrics/{role_id}")
+def rubric_detail(role_id: str, _user: str = Guarded) -> dict[str, Any]:
+    try:
+        return rubrics.describe_rubric(deps(), role_id).__dict__
+    except admin.AdminRefused as refused:
+        raise HTTPException(404, str(refused)) from refused
+
+
+class RubricBody(BaseModel):
+    data: dict[str, Any]
+
+
+@app.put("/api/admin/rubrics/{role_id}")
+def rubric_save(role_id: str, body: RubricBody, _user: str = Guarded) -> dict[str, Any]:
+    """Store a rubric once the whole of it validates; in force on the next run."""
+    try:
+        view = rubrics.save_rubric(deps(), role_id, body.data)
+    except admin.AdminRefused as refused:
+        raise HTTPException(422, str(refused)) from refused
+    rebuild()
+    return view.__dict__
+
+
+@app.delete("/api/admin/rubrics/{role_id}", status_code=204)
+def rubric_reset(role_id: str, _user: str = Guarded) -> None:
+    """Back to the shipped file; a role the admin created is removed."""
+    rubrics.reset_rubric(deps(), role_id)
+    rebuild()
+
+
+class Reassess(BaseModel):
+    run_ids: list[UUID]
+    role_id: str
+
+
+@app.post("/api/runs/reassess", status_code=202)
+def reassess(body: Reassess, _user: str = Guarded) -> dict[str, Any]:
+    """Run the chosen candidates' stored documents against a role."""
+    wired = deps()
+    if wired.settings.demo_mode:
+        raise HTTPException(403, "Demo mode is on, so nothing new is processed.")
+    if body.role_id not in {role.role_id for role in rubrics.list_roles(wired)}:
+        raise HTTPException(422, f"There is no role called {body.role_id!r}.")
+    try:
+        candidates = candidates_from_runs(wired, body.run_ids)
+    except admin.AdminRefused as refused:
+        raise HTTPException(404, str(refused)) from refused
+    threading.Thread(
+        target=process_batch,
+        args=(candidates, body.role_id, wired),
+        daemon=True,
+        name="reassess-batch",
+    ).start()
+    return {"accepted": len(candidates), "role_id": body.role_id}
 
 
 def _json(value: Any) -> Any:
@@ -402,6 +468,8 @@ async def upload(
         )
     if len(files) != len(candidate_ids):
         raise HTTPException(422, "One candidate id per file, in the same order.")
+    if role_id not in {role.role_id for role in rubrics.list_roles(wired)}:
+        raise HTTPException(422, f"There is no role called {role_id!r}.")
 
     inbox = Path(wired.settings.blob_dir).parent / "inbox"
     inbox.mkdir(parents=True, exist_ok=True)

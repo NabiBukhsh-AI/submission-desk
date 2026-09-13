@@ -5,21 +5,25 @@ import { useEffect, useState } from 'react'
 // ponytail: hash routing; a router library if the page count grows past a handful.
 
 export type Route =
+  | { page: 'home' }
   | { page: 'queue' }
   | { page: 'review'; runId: string }
   | { page: 'upload' }
+  | { page: 'roles'; roleId?: string }
   | { page: 'admin' }
   | { page: 'login' }
 
 export function parse(hash: string): Route {
-  const [page = 'queue', id] = hash.replace(/^#\/?/, '').split('/')
+  const [page = 'home', id] = hash.replace(/^#\/?/, '').split('/')
   if (page === 'review' && id) return { page: 'review', runId: id }
-  if (page === 'upload' || page === 'admin' || page === 'login') return { page }
-  return { page: 'queue' }
+  if (page === 'roles') return id ? { page: 'roles', roleId: id } : { page: 'roles' }
+  if (page === 'queue' || page === 'upload' || page === 'admin' || page === 'login') return { page }
+  return { page: 'home' }
 }
 
 export function href(route: Route): string {
   if (route.page === 'review') return `#/review/${route.runId}`
+  if (route.page === 'roles' && route.roleId) return `#/roles/${route.roleId}`
   return `#/${route.page}`
 }
 

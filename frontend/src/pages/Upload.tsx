@@ -5,7 +5,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RolePicker } from '@/components/RolePicker'
 import { ApiError, api, type Health } from '@/lib/api'
+import { useRoles } from '@/lib/roles'
 import { navigate } from '@/lib/router'
 
 // Stated before choosing files, and read from the same limits intake applies.
@@ -27,6 +29,9 @@ type Row = { file: File; candidateId: string }
 export function Upload({ health }: { health: Health | null }) {
   const [rows, setRows] = useState<Row[]>([])
   const [busy, setBusy] = useState(false)
+  const roles = useRoles()
+  const [chosenRole, setRoleId] = useState('')
+  const roleId = chosenRole || roles?.[0]?.role_id || ''
 
   if (health?.demo_mode) {
     return (
@@ -56,7 +61,7 @@ export function Upload({ health }: { health: Health | null }) {
     try {
       const result = await api.upload(
         rows.map((row) => ({ file: row.file, candidateId: row.candidateId.trim() || 'candidate' })),
-        'ai-engineer',
+        roleId,
       )
       toast.success(
         `${result.accepted} candidate${result.accepted === 1 ? '' : 's'} accepted. The queue shows progress.`,
@@ -81,9 +86,19 @@ export function Upload({ health }: { health: Health | null }) {
         </p>
       </div>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="files">Choose files</Label>
-        <Input id="files" type="file" multiple accept={ACCEPT} onChange={(event) => choose(event.target.files)} />
+      <div className="grid gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2">
+        <RolePicker id="upload-role" roles={roles} value={roleId} onChange={setRoleId} label="Assess against" />
+        <div className="grid gap-1.5">
+          <Label htmlFor="files">Choose files</Label>
+          <Input
+            id="files"
+            type="file"
+            multiple
+            accept={ACCEPT}
+            className="h-auto cursor-pointer py-2 file:mr-3 file:rounded-md file:bg-secondary file:px-2 file:py-1"
+            onChange={(event) => choose(event.target.files)}
+          />
+        </div>
       </div>
 
       {rows.length > 0 && (
@@ -132,8 +147,12 @@ export function Upload({ health }: { health: Health | null }) {
               More than {MAX_DOCUMENTS_PER_CANDIDATE} documents for: {tooMany.join(', ')}
             </p>
           )}
-          <Button onClick={submit} disabled={busy || oversized.length > 0 || tooMany.length > 0} className="min-h-11">
-            {busy ? 'Sending…' : 'Process these candidates'}
+          <Button onClick={submit} disabled={busy || !roleId || oversized.length > 0 || tooMany.length > 0} className="min-h-11">
+            {busy
+              ? 'Sending…'
+              : `Process ${candidates.size} candidate${candidates.size === 1 ? '' : 's'} as ${
+                  roles?.find((role) => role.role_id === roleId)?.role_title ?? 'this role'
+                }`}
           </Button>
         </>
       )}

@@ -1,0 +1,192 @@
+# Full Stack Developer (React and a server-side stack).
+#
+# Same shape as ai-engineer.yaml, and the same rules: min_supported is how many
+# separate quotations a point needs before it counts, state_points is what each
+# outcome is worth, and insufficient_evidence is left out of the calculation
+# rather than counted as zero. Edit here; nothing in code names a criterion.
+
+role_id: fullstack-developer
+role_title: Full Stack Developer
+version: "1.0.0"
+
+min_coverage: 0.70
+blind_mode_default: true
+
+forbidden_attributes:
+  - age
+  - gender
+  - nationality
+  - ethnicity
+  - religion
+  - marital_status
+  - family_status
+  - disability
+  - personality
+  - culture_fit
+  - appearance
+
+notes_for_reviewer: >-
+  Every quotation below was checked against the source document before it was
+  shown to you. Anything the system could not verify was removed and is listed
+  separately.
+
+criteria:
+  - id: shipped-web-product
+    label: Has shipped a web application to real users
+    question: >-
+      Does the document show that this person built and released a web
+      application that people outside their own team used?
+    kind: high_stakes
+    weight: 5
+    min_supported: 2
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "launched to customers"
+      - "in production since"
+      - "serving N monthly users"
+      - "released the customer portal"
+    negative_examples:
+      - "completed a bootcamp project"
+      - "personal side project, not deployed"
+      - "tutorial application"
+
+  - id: react-depth
+    label: Substantial React experience
+    question: >-
+      Does the document show React used for real interfaces, including state
+      management, data fetching, or component architecture, rather than for
+      coursework?
+    kind: high_stakes
+    weight: 5
+    min_supported: 2
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "built the React front end"
+      - "component library"
+      - "Next.js"
+      - "migrated to React"
+      - "state management with"
+    negative_examples:
+      - "familiar with React"
+      - "learned React"
+
+  - id: backend-and-api-design
+    label: Designs and runs server-side APIs
+    question: >-
+      Does the document show design and delivery of server-side APIs or
+      services, such as REST or GraphQL endpoints, authentication, or
+      background jobs?
+    kind: standard
+    weight: 4
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "designed the REST API"
+      - "GraphQL schema"
+      - "Node.js service"
+      - "Django, Flask, FastAPI, Express, Rails, Spring"
+      - "implemented authentication"
+    negative_examples:
+      - "consumed a third-party API"
+
+  - id: data-modelling
+    label: Models and queries data soundly
+    question: >-
+      Does the document show ownership of a database schema, migrations, or
+      query performance work on a relational or document database?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "designed the schema"
+      - "wrote migrations"
+      - "PostgreSQL, MySQL, MongoDB"
+      - "optimised slow queries"
+      - "added indexes"
+
+  - id: testing-and-quality
+    label: Tests what they ship
+    question: >-
+      Does the document show automated testing, code review practice, or
+      continuous integration applied to the person's own work?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "unit and integration tests"
+      - "end-to-end tests with Playwright or Cypress"
+      - "CI pipeline"
+      - "test coverage"
+    negative_examples:
+      - "tested manually"
+
+  - id: production-operations
+    label: Runs what they build
+    question: >-
+      Does the document show ownership of a system in production, such as
+      deployment, monitoring, incident response, or performance work?
+    kind: standard
+    weight: 3
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "deployed with Docker"
+      - "set up monitoring"
+      - "on-call"
+      - "reduced page load time"
+      - "AWS, GCP, Azure, Vercel"
+    negative_examples:
+      - "handed over to the operations team"
+
+  - id: accessibility-and-ux
+    label: Builds accessible, usable interfaces
+    question: >-
+      Does the document show attention to accessibility, responsive design,
+      or usability, such as WCAG work, keyboard support, or user testing?
+    kind: standard
+    weight: 2
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "WCAG"
+      - "accessibility audit"
+      - "responsive design"
+      - "user testing"
+      - "screen reader"
+
+  - id: collaboration-and-communication
+    label: Works with designers, product, and other engineers
+    question: >-
+      Does the document show working across disciplines, such as with
+      designers or product managers, or explaining technical work to
+      non-engineers?
+    kind: standard
+    weight: 2
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.5, not_met: 0.0, contradicted: 0.0}
+    positive_examples:
+      - "worked with the design team"
+      - "wrote the technical documentation"
+      - "presented to stakeholders"
+      - "mentored"
+
+  # A blocker decides the outcome on its own, so it asks a narrow, checkable
+  # question. It can never decline a candidate on silence: an unaddressed
+  # blocker routes the run to a person instead.
+  - id: work-authorisation-stated
+    label: States eligibility to work in the required location
+    question: >-
+      Does the document state the candidate's eligibility to work in the
+      location this role requires?
+    kind: blocker
+    weight: 1
+    min_supported: 1
+    state_points: {met: 1.0, partial: 0.0, not_met: 0.0, contradicted: 0.0}
+
+bands:
+  - {band: advance, min_score: 0.75}
+  - {band: advance_with_reservations, min_score: 0.60}
+  - {band: hold, min_score: 0.40}
+  - {band: decline, min_score: 0.0}

@@ -299,8 +299,11 @@ def node(state: RunState, deps: Deps) -> NodeResult:
     hashes: list[str] = []
 
     for ref in refs:
+        # A document the store already holds by hash is read from there: the
+        # bytes are the same, and the inbox file may be long gone.
+        known = ref.metadata.get("sha256", "")
         try:
-            data = deps.source.fetch(ref)
+            data = store.get(known) if known and store.exists(known) else deps.source.fetch(ref)
         except SourceUnavailable:
             return _rejected(state, RejectionReason.SOURCE_UNAVAILABLE, events)
 

@@ -176,6 +176,48 @@ export type Probe = {
   tier: string
 }
 
+export type Role = {
+  role_id: string
+  role_title: string
+  version: string
+  criteria: number
+  source: 'file' | 'admin'
+}
+
+// The rubric as data, the shape of rubrics/<role>.yaml. Edited on the roles
+// page and validated whole by the API before anything is stored.
+export type CriterionData = {
+  id: string
+  label: string
+  question: string
+  kind: 'standard' | 'high_stakes' | 'blocker'
+  weight: number
+  min_supported?: number
+  state_points: Record<string, number | null>
+  positive_examples?: string[]
+  negative_examples?: string[]
+}
+
+export type RubricData = {
+  role_id: string
+  role_title: string
+  version: string
+  min_coverage?: number
+  blind_mode_default?: boolean
+  forbidden_attributes?: string[]
+  notes_for_reviewer?: string | null
+  criteria: CriterionData[]
+  bands: { band: string; min_score: number }[]
+}
+
+export type RubricView = {
+  role_id: string
+  source: 'file' | 'admin'
+  rubric_hash: string
+  data: RubricData
+  yaml: string
+}
+
 export type Health = {
   ok: boolean
   demo_mode: boolean
@@ -195,6 +237,17 @@ export const api = {
       request<{ user: string }>('/api/auth/login', json({ username, password })),
     logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   },
+  roles: () => request<Role[]>('/api/roles'),
+  rubric: (roleId: string) => request<RubricView>(`/api/admin/rubrics/${roleId}`),
+  saveRubric: (roleId: string, data: RubricData) =>
+    request<RubricView>(`/api/admin/rubrics/${roleId}`, json({ data }, 'PUT')),
+  resetRubric: (roleId: string) =>
+    request<void>(`/api/admin/rubrics/${roleId}`, { method: 'DELETE' }),
+  reassess: (runIds: string[], roleId: string) =>
+    request<{ accepted: number; role_id: string }>(
+      '/api/runs/reassess',
+      json({ run_ids: runIds, role_id: roleId }),
+    ),
   admin: {
     settings: () => request<SettingsView>('/api/admin/settings'),
     save: (changes: Record<string, string>, keys: Record<string, string>) =>
