@@ -300,6 +300,35 @@ assessed candidates does not touch the provider and keeps working throughout.
 that would double the bill for the same answer. Lower `ASSESS_CONCURRENCY`
 to reduce parallel calls per candidate. The token ceiling still applies.
 
+## 6a. Hosting on Render
+
+One container: the API, the built interface served from the same origin, and
+Tesseract. `render.yaml` is the blueprint.
+
+1. Push the repository. In Render: **New → Blueprint**, pick the repository,
+   accept the service it finds. The first build takes about five minutes.
+2. Open the service URL. The first visit creates the admin account.
+3. **Settings** → Anthropic → paste the key → **Test the connection**. Set the
+   reviewer id. Upload a CV.
+
+What the free plan does and does not do: the service sleeps after fifteen
+minutes idle (the first request wakes it, slowly) and its filesystem is
+wiped on every deploy — the database, uploaded documents and the saved key
+start over; the sample candidates are re-created at start. `APP_SECRET` is
+generated once by Render and kept, so a saved key stays readable across
+restarts within one deploy. For data that survives deploys, a paid plan
+with the disk block in `render.yaml` uncommented: the paths already point
+at `/var/data`.
+
+The same image runs anywhere Docker does:
+
+    docker build -t submission-desk .
+    docker run --rm -p 8000:8000 -e APP_SECRET=change-me -v sd-data:/app/data submission-desk
+
+The container starts without demo mode: uploads are accepted and assessed by
+the stand-in until a key is saved. To run the hosted copy in demo mode
+instead, set `DEMO_MODE=true` in the service's environment.
+
 ## 7. Data handling
 
 Nothing under `data/` is committed except `data/samples/`, and the PII scanner

@@ -24,6 +24,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.components.status_chip import BAND_LABELS, CHIPS, band_label, chip_for
@@ -524,3 +525,15 @@ async def upload(
         target=process_batch, args=(candidates, role_id, wired), daemon=True, name="process-batch"
     ).start()
     return {"accepted": len(candidates), "candidate_ids": list(grouped)}
+
+
+# --- the frontend, when it has been built ------------------------------------------------
+#
+# One origin for the page and the API: the session cookie is same-site, no
+# CORS list has to name the deployment, and one process serves the whole thing.
+# The API routes above take precedence; everything else is the built page,
+# whose hash router handles the rest. Absent in development, where Vite serves
+# the page and proxies /api here.
+FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

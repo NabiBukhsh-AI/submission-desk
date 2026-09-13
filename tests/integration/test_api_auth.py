@@ -279,7 +279,7 @@ def test_the_probe_reports_what_the_offline_client_answered(http: TestClient) ->
     body = http.post("/api/admin/probe").json()
 
     assert [probe["tier"] for probe in body] == ["tier_cheap", "tier_strong"]
-    assert all("message" in probe for probe in body)
+    assert all(probe["ok"] and "stand-in" in probe["message"] for probe in body)
 
 
 # --- the secrets adapter -----------------------------------------------------------------

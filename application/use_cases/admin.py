@@ -260,6 +260,13 @@ def _probe_tier(deps: Deps, tier: Any) -> ProbeResult:
 
     if deps.models is None:
         return ProbeResult(False, "No model client is configured.", tier=tier.value)
+    if deps.settings.model_provider in ("", "fake"):
+        return ProbeResult(
+            True,
+            "The offline stand-in is in use: it answers every call without a provider, so "
+            "there is no connection to test. Choose Anthropic and save a key to test one.",
+            tier=tier.value,
+        )
 
     request = GenerationRequest(
         call_site="assess.criterion",

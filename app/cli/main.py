@@ -99,7 +99,16 @@ def cmd_api(args: argparse.Namespace) -> int:
         # One line per node and per model call, as they happen. The request
         # log is off because the queue polls and would drown them.
         os.environ["LOG_CONSOLE"] = "1"
-    uvicorn.run("app.api.main:app", host=args.host, port=args.port, access_log=not args.logs)
+    uvicorn.run(
+        "app.api.main:app",
+        host=args.host,
+        port=args.port,
+        access_log=not args.logs,
+        # Behind Render's (or any) TLS-terminating proxy, the forwarded
+        # scheme is what makes the session cookie secure.
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+    )
     return 0
 
 

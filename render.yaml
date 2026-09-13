@@ -1,0 +1,38 @@
+# Render blueprint: one web service from the Dockerfile.
+#
+# In Render: New → Blueprint → this repository. The free plan runs it with the
+# caveat that its filesystem is wiped on every deploy and the service sleeps
+# after fifteen minutes idle: the database, uploaded documents and the saved
+# model key start over each time (the sample candidates are re-created at
+# start). For data that survives, move to a paid plan and uncomment the disk
+# below; the paths already point at it.
+#
+# APP_SECRET is generated once by Render and kept, which is what makes a saved
+# model key readable after a restart.
+
+services:
+  - type: web
+    name: submission-desk
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_SECRET
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /var/data/db/submission_desk.sqlite
+      - key: BLOB_DIR
+        value: /var/data/blobs
+      - key: LOG_DIR
+        value: /var/data/logs
+      - key: MODEL_PROVIDER
+        value: fake
+      - key: BLIND_MODE
+        value: "true"
+    # Paid plans only. Uncomment for a database that survives deploys.
+    # disk:
+    #   name: data
+    #   mountPath: /var/data
+    #   sizeGB: 1

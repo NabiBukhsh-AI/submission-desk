@@ -6,6 +6,9 @@
 .ruff_cache
 __pycache__
 *.egg-info
+node_modules
+frontend/node_modules
+frontend/dist
 data/db
 data/blobs
 data/logs

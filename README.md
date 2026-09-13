@@ -42,6 +42,9 @@ the API with `make api-live` instead to accept real documents. Both interfaces
 render what the use cases return; neither holds business logic, and the same
 architecture test walks both.
 
+To host it: `render.yaml` deploys the whole thing as one container on Render
+(RUNBOOK section 6a), and the same `Dockerfile` runs anywhere Docker does.
+
 ## What is in the box
 
 - **An eleven-node pipeline** — CONFIG, INTAKE, EXTRACT, SANITIZE, STRUCTURE,
