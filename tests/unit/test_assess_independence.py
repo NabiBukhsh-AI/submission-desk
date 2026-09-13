@@ -103,7 +103,7 @@ def assess_in_order(deps: Deps, order: tuple[str, ...]):
                     extraction_method=ExtractionMethod.DIGITAL_PDF,
                 )
             ],
-            normalization_profile_id=deps.extractor.profile_id,
+            normalization_profile_id=deps.source_profile_id,
             extraction_confidence=0.95,
         ),
         document_sha256=digest,
@@ -271,7 +271,7 @@ def test_no_prompt_carries_another_criterions_result(deps: Deps) -> None:
                     extraction_method=ExtractionMethod.DIGITAL_PDF,
                 )
             ],
-            normalization_profile_id=deps.extractor.profile_id,
+            normalization_profile_id=deps.source_profile_id,
             extraction_confidence=0.9,
         ),
         document_sha256=digest,

@@ -95,7 +95,11 @@ def cmd_reconcile(_args: argparse.Namespace) -> int:
 
 def cmd_api(args: argparse.Namespace) -> int:
     """Serve the HTTP interface. A subcommand so `--demo` applies to it too."""
-    uvicorn.run("app.api.main:app", host=args.host, port=args.port)
+    if args.logs:
+        # One line per node and per model call, as they happen. The request
+        # log is off because the queue polls and would drown them.
+        os.environ["LOG_CONSOLE"] = "1"
+    uvicorn.run("app.api.main:app", host=args.host, port=args.port, access_log=not args.logs)
     return 0
 
 
@@ -153,6 +157,9 @@ def build_parser() -> argparse.ArgumentParser:
         elif name == "api":
             sub.add_argument("--host", default="127.0.0.1")
             sub.add_argument("--port", type=int, default=8000)
+            sub.add_argument(
+                "--logs", action="store_true", help="print one line per node and model call"
+            )
         elif name == "purge":
             sub.add_argument(
                 "--days",

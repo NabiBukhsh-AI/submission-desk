@@ -6,11 +6,16 @@ shape OpenRouter documents; usage comes from the response's ``usage`` object
 provider reports them).
 
 Structured output is requested as a JSON schema. Not every model honours
-``response_format`` — the free tiers in particular — so a request the model
-rejects for that reason is sent once more as plain JSON, with the schema
-described in the system prompt instead. The response is validated against the
-contract either way; the schema request only raises the odds of a first-time
-fit.
+``response_format`` — the free tiers in particular, and the wording of the
+refusal differs by upstream provider — so a request rejected as a bad request
+is sent once more as plain JSON, with the schema described in the system
+prompt instead. The response is validated against the contract either way;
+the schema request only raises the odds of a first-time fit.
+
+Reasoning is switched off. Every call here asks for a short structured answer
+at temperature zero; a model that thinks first spends its whole output budget
+on the thinking, returns an empty message, and is billed for it. Models that
+cannot switch it off ignore the flag.
 
 Standard library HTTP on purpose: one POST, one JSON body, no client library
 to version.
@@ -43,11 +48,15 @@ def make_transport(api_key: str, base_url: str = "") -> Any:
     def transport(payload: dict[str, Any], *, timeout: float) -> dict[str, Any]:
         try:
             response = _post(endpoint, api_key, _body(payload, with_schema=True), timeout)
-        except _Rejected as rejected:
-            if not rejected.about_response_format:
-                raise ModelUnavailable(rejected.message) from rejected
-            # The model does not take a schema. Ask in words instead.
-            response = _post(endpoint, api_key, _body(payload, with_schema=False), timeout)
+        except _Rejected:
+            # Most likely the model does not take a schema. Ask in words
+            # instead; a second refusal is reported as it came.
+            try:
+                response = _post(endpoint, api_key, _body(payload, with_schema=False), timeout)
+            except _Rejected as rejected:
+                raise ModelUnavailable(
+                    f"OpenRouter refused the request: {rejected.message}"
+                ) from rejected
 
         choices = response.get("choices") or []
         message = (choices[0].get("message") or {}) if choices else {}
@@ -81,6 +90,7 @@ def _body(payload: dict[str, Any], *, with_schema: bool) -> dict[str, Any]:
         "messages": [{"role": "system", "content": system}, *payload["messages"]],
         "temperature": payload.get("temperature", 0.0),
         "max_tokens": payload["max_output_tokens"],
+        "reasoning": {"enabled": False},
     }
     if payload.get("seed") is not None:
         body["seed"] = payload["seed"]
@@ -99,14 +109,11 @@ def _body(payload: dict[str, Any], *, with_schema: bool) -> dict[str, Any]:
 
 
 class _Rejected(Exception):
-    def __init__(self, status: int, message: str) -> None:
-        super().__init__(message)
-        self.status = status
-        self.message = message
+    """A 400: the request itself, not the key or the account."""
 
-    @property
-    def about_response_format(self) -> bool:
-        return self.status == BAD_REQUEST and "response_format" in self.message.lower()
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
 
 
 def _post(endpoint: str, api_key: str, body: dict[str, Any], timeout: float) -> dict[str, Any]:
@@ -138,7 +145,7 @@ def _post(endpoint: str, api_key: str, body: dict[str, Any], timeout: float) -> 
                 "OpenRouter is rate-limiting requests. This will be retried."
             ) from error
         if error.code == BAD_REQUEST:
-            raise _Rejected(BAD_REQUEST, detail) from error
+            raise _Rejected(detail) from error
         raise ModelUnavailable(
             f"OpenRouter could not complete the request ({error.code}). This will be retried."
         ) from error

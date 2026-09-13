@@ -7,6 +7,7 @@ default run, so the absence of credentials is never the reason a test fails.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,13 @@ def offline_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     forgot to set this would pass locally, cost money, and fail in CI.
     """
     monkeypatch.setenv("MODEL_PROVIDER", "fake")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def logs_outside_the_tree(tmp_path_factory: pytest.TempPathFactory) -> None:
+    """The event log is written wherever LOG_DIR points; for the suite that is
+    a temporary directory, not data/logs."""
+    os.environ.setdefault("LOG_DIR", str(tmp_path_factory.mktemp("logs")))
 
 
 @pytest.fixture

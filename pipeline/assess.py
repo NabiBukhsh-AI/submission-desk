@@ -523,7 +523,7 @@ def _events_for(outcomes: list[CriterionOutcome]) -> list[DomainEvent]:
 
 
 def _sources_for(deps: Deps, state: RunState) -> dict[UUID, SourceText]:
-    profile_id = deps.extractor.profile_id
+    profile_id = deps.source_profile_id
     found: dict[UUID, SourceText] = {}
     for document in deps.candidates.documents_for_run(state.run_id):
         source = deps.candidates.get_source_text(document.document_sha256, profile_id)

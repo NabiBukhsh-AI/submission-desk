@@ -34,6 +34,7 @@ from domain.ports.models import (
     render_document_block,
 )
 from infrastructure.models.repairing import validate_response
+from infrastructure.observability.logging import get_logger
 
 
 @dataclass(frozen=True)
@@ -83,16 +84,33 @@ class ProviderModelClient:
         try:
             response = self._send(payload, timeout=min(request.timeout_s, binding.timeout_s))
         except TimeoutError as timeout:
+            get_logger().warning("model.timeout", site=request.call_site, model=binding.model)
             raise ModelUnavailable("the provider did not respond within the timeout") from timeout
+        except ModelUnavailable as refused:
+            get_logger().warning(
+                "model.refused", site=request.call_site, model=binding.model, why=str(refused)
+            )
+            raise
 
         latency_ms = int((time.monotonic() - started) * 1000)
         raw_text = response.get("text", "")
         parsed, validation_error = validate_response(raw_text, request.response_schema)
+        usage = _usage_from(response)
+        get_logger().info(
+            "model.call",
+            site=request.call_site,
+            tier=request.tier.value,
+            model=binding.model,
+            tokens=f"{usage.input_tokens}/{usage.output_tokens}",
+            ms=latency_ms,
+            ok=validation_error is None,
+            **({"problem": validation_error[:160]} if validation_error else {}),
+        )
 
         return GenerationResult(
             parsed=parsed,
             raw_text=raw_text,
-            usage=_usage_from(response),
+            usage=usage,
             tier=request.tier,
             latency_ms=latency_ms,
             validation_error=validation_error,

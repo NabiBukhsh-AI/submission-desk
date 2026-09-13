@@ -30,6 +30,7 @@ from domain.ports.repositories import (
     ReviewRepository,
     RunRepository,
 )
+from domain.provenance.normalization import PROFILE_ID as NORMALIZATION_PROFILE
 
 
 class Clock(Protocol):
@@ -192,3 +193,11 @@ class Deps:
     #: Seals secrets at rest and hashes passwords. A port, so the use cases
     #: that manage the admin account never see a cipher.
     secrets: Any = None
+
+    @property
+    def source_profile_id(self) -> str:
+        """The key a document's text is stored under: how the extractor
+        assembled it, plus how the domain normalised it. A change to either
+        re-reads the document rather than validating spans against the wrong
+        text."""
+        return f"{self.extractor.profile_id}+{NORMALIZATION_PROFILE}"

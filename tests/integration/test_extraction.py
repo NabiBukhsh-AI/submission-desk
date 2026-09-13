@@ -17,6 +17,7 @@ import pytest
 from application.deps import Deps
 from domain.contracts import CandidateDocument, DocumentRole, ExtractionMethod
 from domain.ports.extraction import ExtractionFailed, OcrResult
+from domain.provenance.normalization import normalize_source
 from infrastructure.extraction import confidence, language, layout
 from infrastructure.extraction.dispatcher import PAGE_SEPARATOR, Extractor
 from infrastructure.extraction.ocr import (
@@ -92,6 +93,25 @@ def test_pages_are_separated_so_no_sentence_spans_the_seam(extractor: Extractor)
     source = extractor.extract(document(), pdfs.text_pdf(pages=2))
 
     assert PAGE_SEPARATOR in source.normalized_text
+
+
+def test_a_quotation_wrapped_across_lines_in_the_pdf_still_validates(
+    extractor: Extractor,
+) -> None:
+    """The failure that rejected real evidence from a real CV: the PDF broke
+    the sentence across two lines, the model quoted it on one, and the
+    unnormalised haystack never contained the quotation. The node normalises
+    what the extractor returns; after that the pages still tile the text,
+    the seam is still a block boundary, and the quotation is found."""
+    source = normalize_source(extractor.extract(document(), pdfs.text_pdf(pages=2)))
+    first, second = source.raw_text.splitlines()[:2]
+    quotation = f"{first.strip()} {second.strip()}"
+
+    assert chr(10) not in source.normalized_text
+    assert quotation in source.normalized_text
+    assert source.pages[-1].norm_end == len(source.normalized_text)
+    assert source.pages[0].norm_end == source.pages[1].norm_start
+    assert source.pages[1].norm_start in {start for start, _ in source.block_boundaries}
 
 
 def test_a_forty_page_document_is_read_without_truncation(extractor: Extractor) -> None:
@@ -541,7 +561,7 @@ def test_a_poorly_read_document_degrades_rather_than_failing(deps: Deps) -> None
     assert result.status in (NodeStatus.OK, NodeStatus.DEGRADED)
     stored = deps.candidates.get_source_text(
         deps.candidates.documents_for_run(result.state.run_id)[0].document_sha256,
-        deps.extractor.profile_id,
+        deps.source_profile_id,
     )
     assert stored is not None
     assert "Acme" in stored.normalized_text

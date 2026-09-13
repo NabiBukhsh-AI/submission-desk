@@ -20,7 +20,7 @@ import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from domain.contracts.source_text import OffsetRun
+from domain.contracts.source_text import OffsetRun, SourceText
 
 #: The shipped profile. Any change to the steps or their order changes this id,
 #: which invalidates the extraction cache rather than silently mismatching spans
@@ -298,3 +298,45 @@ def normalize(text: str) -> str:
     source once the same rules have been applied to both sides.
     """
     return normalize_with_map(text).text
+
+
+def normalize_source(source: SourceText) -> SourceText:
+    """Apply the profile to an extracted document.
+
+    The extractor hands over raw text with an identity map; this is where the
+    normalised text, the real offset map and the composed profile id are
+    produced. Page and block boundaries are carried through the map, so a
+    boundary that fell on collapsed whitespace moves to the next character
+    rather than being lost. Applied once, at extraction; the span validator
+    applies the same steps to every quotation it checks.
+    """
+    normalized = normalize_with_map(source.raw_text)
+    runs = list(normalized.runs)
+    total = len(normalized.text)
+    starts = [_norm_at(page.norm_start, runs, total) for page in source.pages]
+    ends = [*starts[1:], total]
+    blocks = [
+        (_norm_at(start, runs, total), _norm_at(end, runs, total))
+        for start, end in source.block_boundaries
+    ]
+    return source.model_copy(
+        update={
+            "normalized_text": normalized.text,
+            "offset_runs": runs,
+            "pages": [
+                page.model_copy(update={"norm_start": start, "norm_end": end})
+                for page, start, end in zip(source.pages, starts, ends, strict=True)
+            ],
+            "normalization_profile_id": f"{source.normalization_profile_id}+{PROFILE_ID}",
+            "block_boundaries": [(start, end) for start, end in blocks if start < end],
+        }
+    )
+
+
+def _norm_at(raw_index: int, runs: list[OffsetRun], total: int) -> int:
+    """The normalised index of the first surviving character at or after
+    ``raw_index``; the end of the text when nothing survives past it."""
+    for run in runs:
+        if raw_index < run.raw_start + run.length:
+            return run.norm_start + max(raw_index - run.raw_start, 0)
+    return total

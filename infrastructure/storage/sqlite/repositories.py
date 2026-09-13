@@ -53,6 +53,7 @@ from domain.contracts import (
     SpanValidation,
 )
 from domain.ports.repositories import StaleRunVersion
+from infrastructure.observability.logging import get_logger
 from infrastructure.storage.sqlite.connection import connect, write_transaction
 
 
@@ -1206,6 +1207,16 @@ class SqliteEventRepository(SqliteRepository):
                 (str(run_id),),
             ).fetchone()
             seq = int(row["seq"]) + 1
+            details = payload or {}
+            get_logger().info(
+                "node." + node.lower(),
+                run_id=run_id,
+                candidate=details.get("candidate_id", ""),
+                status=node_status,
+                to=to_status.value if to_status else None,
+                ms=details.get("latency_ms"),
+                **({"error": details["error_code"]} if "error_code" in details else {}),
+            )
             write.execute(
                 """
                 INSERT INTO run_events (

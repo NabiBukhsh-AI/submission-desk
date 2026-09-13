@@ -164,6 +164,18 @@ line is `[ ok ]`, `[warn]` or `[fail]` with an action; a failure exits 1.
 
 ## 5. When something is wrong
 
+**Watch it work.** `make api` and `make api-live` print one line per node and
+per model call as they happen:
+
+    07:45:22  model.call       site=structure.profile tier=tier_cheap model=… tokens=1316/1740 ms=17483 ok=True
+    07:45:27  model.call       site=assess.criterion tier=tier_cheap model=… tokens=1457/89 ms=3953 ok=False problem=evidence.0: … must quote the document
+    07:45:27  model.repair     site=assess.criterion why=evidence.0: …
+    07:45:56  node.assess      run_id=01a099ba candidate=x status=ok to=assessed ms=33178
+
+`ok=False` with a `problem` is the model's answer failing the contract; the
+repair line is the one retry. The same events go to `data/logs/events-<date>.jsonl`
+in full, redacted. Set `LOG_CONSOLE=1` for the same lines from any command.
+
 **The queue shows "Could not finish".** Open the candidate; the reason is on
 the run. Common ones: a document refused at intake (encrypted, corrupt, too
 large, almost no text), extraction that found nothing, or the token ceiling.
@@ -233,6 +245,15 @@ To run against a real provider, on the admin page (or in the environment):
    system contacts a provider on purpose without a candidate.
 4. Start the API without demo mode (`make api-live`) so uploads are accepted.
    `make api` is demo mode: the stand-in answers whatever the page says.
+
+The free OpenRouter models are usable and slow to be trusted: they think
+before answering (reasoning is switched off in the request, or the whole
+output budget goes on the thinking), they do not all take a JSON schema (the
+request is retried as plain JSON), and they often mark a criterion supported
+without quoting the document, which the contract refuses and the one repair —
+sent without the document, by design (ADR-004) — cannot add. Such a criterion
+ends as insufficient evidence rather than a made-up quote. A CV through Claude
+Haiku 4.5 costs about three cents and follows the contract.
 
 Structured output is asked for as a JSON schema on both providers. OpenRouter's
 free models do not all honour `response_format`; when one refuses, the same

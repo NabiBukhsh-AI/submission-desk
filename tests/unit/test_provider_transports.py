@@ -109,6 +109,8 @@ def test_openrouter_sends_the_documented_shape(monkeypatch: pytest.MonkeyPatch) 
     assert body["messages"][1]["role"] == "user"
     assert body["response_format"]["type"] == "json_schema"
     assert body["max_tokens"] == 256
+    # Thinking models would spend the whole budget thinking and return nothing.
+    assert body["reasoning"] == {"enabled": False}
     assert result == {
         "id": "gen-1",
         "text": '{"ok": true}',
@@ -137,8 +139,10 @@ def test_openrouter_strips_a_fenced_block(monkeypatch: pytest.MonkeyPatch) -> No
 def test_openrouter_retries_as_plain_json_when_the_schema_is_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """The refusal's wording is the upstream provider's, so any 400 with a
+    schema attached is tried once more without one."""
     http = _Http(
-        (400, {"error": {"message": "response_format is not supported by this model"}}),
+        (400, {"error": {"message": "model features structured outputs not support"}}),
         _ok('{"ok": true}'),
     )
     monkeypatch.setattr(openrouter.urllib.request, "urlopen", http)
@@ -166,13 +170,16 @@ def test_openrouter_failures_are_sentences(
         openrouter.make_transport("k")(PAYLOAD, timeout=10)
 
 
-def test_openrouter_a_different_400_is_not_retried(monkeypatch: pytest.MonkeyPatch) -> None:
-    http = _Http((400, {"error": {"message": "model not found"}}))
+def test_openrouter_a_second_400_is_reported_as_it_came(monkeypatch: pytest.MonkeyPatch) -> None:
+    http = _Http(
+        (400, {"error": {"message": "model not found"}}),
+        (400, {"error": {"message": "model not found"}}),
+    )
     monkeypatch.setattr(openrouter.urllib.request, "urlopen", http)
 
     with pytest.raises(ModelUnavailable, match="model not found"):
         openrouter.make_transport("k")(PAYLOAD, timeout=10)
-    assert len(http.requests) == 1
+    assert len(http.requests) == 2
 
 
 # --- Anthropic -------------------------------------------------------------------------------

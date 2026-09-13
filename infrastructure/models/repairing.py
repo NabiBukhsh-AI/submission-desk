@@ -29,6 +29,7 @@ from domain.ports.models import (
     PromptBlock,
     Usage,
 )
+from infrastructure.observability.logging import get_logger
 
 #: One. Not a default, not configurable at the call site: the architecture caps
 #: total attempts per call site at three, and this layer owns exactly one of
@@ -62,6 +63,9 @@ class RepairingClient:
             # help, and the layer that handles transport already tried.
             return first
 
+        get_logger().info(
+            "model.repair", site=request.call_site, why=(first.validation_error or "")[:160]
+        )
         repaired = self.inner.structured_generate(self._repair_request(request, first))
         elapsed = int((time.monotonic() - started) * 1000)
 

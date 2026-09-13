@@ -19,6 +19,7 @@ from domain.contracts.enums import RunStatus
 from domain.contracts.errors import ErrorRecord
 from domain.contracts.run_state import DomainEvent, NodeResult, NodeStatus, RunState
 from domain.ports.extraction import ExtractionFailed
+from domain.provenance.normalization import normalize_source
 
 
 def node(state: RunState, deps: Deps) -> NodeResult:
@@ -33,7 +34,7 @@ def node(state: RunState, deps: Deps) -> NodeResult:
         return _failed(state, "No documents were stored for this candidate.", "NO_DOCUMENTS")
 
     events: list[DomainEvent] = []
-    profile_id = deps.extractor.profile_id
+    profile_id = deps.source_profile_id
     poor_quality: list[str] = []
     ocr_pages = 0
 
@@ -50,7 +51,7 @@ def node(state: RunState, deps: Deps) -> NodeResult:
 
         try:
             data = deps.blobs.get(document.document_sha256)
-            source = deps.extractor.extract(document, data, profile_id=profile_id)
+            source = normalize_source(deps.extractor.extract(document, data))
         except ExtractionFailed as failure:
             return _failed(state, str(failure), failure.error_code)
 

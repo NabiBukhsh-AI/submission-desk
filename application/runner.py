@@ -172,6 +172,7 @@ def _commit_node(
         to_status=to_status,
         node_status=result.status.value,
         payload={
+            "candidate_id": result.state.candidate_id,
             "latency_ms": latency_ms,
             "events": [event.name for event in result.events],
             **({"error_code": result.error.error_code} if result.error else {}),

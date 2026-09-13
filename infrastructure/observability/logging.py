@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -109,6 +110,33 @@ class SqliteSink:
         return event
 
 
+def console_line(_logger: Any, _method: str, event: dict[str, Any]) -> str:
+    """One line a person can follow while the system works.
+
+    ``12:26:05  model.call  run=01a099a7 candidate=x tier=tier_cheap ...`` —
+    the time, the event, then the fields in the order they were logged. The
+    JSONL file has the full record; this is the glance.
+    """
+    stamp = str(event.pop("timestamp", ""))[11:19]
+    name = str(event.pop("event", ""))
+    event.pop("level", None)
+    fields = " ".join(f"{key}={_short(value)}" for key, value in event.items())
+    return f"{stamp}  {name:<16} {fields}"
+
+
+#: A uuid's first block is enough to tell runs apart on one screen. Anything
+#: longer than a line's worth is cut.
+UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+LINE_CHARS = 80
+
+
+def _short(value: Any) -> str:
+    text = str(value)
+    if UUID.fullmatch(text):
+        return text[:8]
+    return text if len(text) <= LINE_CHARS else text[: LINE_CHARS - 3] + "..."
+
+
 def drop_output(_logger: Any, _method: str, event: dict[str, Any]) -> str:
     """The last processor. The sinks have already written; nothing goes to stdout.
 
@@ -121,7 +149,7 @@ def drop_output(_logger: Any, _method: str, event: dict[str, Any]) -> str:
 def configure(
     *,
     db_path: Path | str | None = None,
-    log_dir: Path | str = LOG_DIR,
+    log_dir: Path | str | None = None,
     names: list[str] | None = None,
     log_spans: bool | None = None,
     console: bool | None = None,
@@ -138,7 +166,9 @@ def configure(
         # First among the things that touch the payload. Everything below this
         # line sees redacted values and nothing above it writes anywhere.
         Redactor(names=names, log_spans=log_spans),
-        JsonlSink(log_dir),
+        # An explicit directory wins; otherwise LOG_DIR from the environment,
+        # otherwise the day's file under data/logs.
+        JsonlSink(log_dir or os.environ.get("LOG_DIR", "").strip() or LOG_DIR),
     ]
 
     if db_path is not None:
@@ -149,7 +179,7 @@ def configure(
         if console is not None
         else os.environ.get("LOG_CONSOLE", "").strip().lower() in ("1", "true", "yes", "on")
     )
-    processors.append(structlog.dev.ConsoleRenderer(colors=False) if show_console else drop_output)
+    processors.append(console_line if show_console else drop_output)
 
     structlog.configure(
         processors=processors,

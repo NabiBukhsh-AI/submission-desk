@@ -103,12 +103,12 @@ run:
 
 # The HTTP API, in demo mode, on the port the frontend's dev proxy expects.
 api:
-	$(PY) -m app.cli.main --demo api
+	$(PY) -m app.cli.main --demo api --logs
 
 # The HTTP API on real documents: uploads accepted, and the provider chosen
 # on the admin page (Settings) makes the calls. Read RUNBOOK.md first.
 api-live:
-	$(PY) -m app.cli.main api
+	$(PY) -m app.cli.main api --logs
 
 # The React frontend. Needs Node; `npm install` runs once in frontend/.
 web:

@@ -119,7 +119,7 @@ def store_document(deps: Deps, run_id, text: str) -> SourceText:
                 extraction_method=ExtractionMethod.DIGITAL_PDF,
             )
         ],
-        normalization_profile_id=deps.extractor.profile_id,
+        normalization_profile_id=deps.source_profile_id,
         extraction_confidence=0.95,
         detected_languages=["en"],
     )

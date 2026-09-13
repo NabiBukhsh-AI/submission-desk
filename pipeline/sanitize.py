@@ -168,7 +168,7 @@ def _scan_one(
     document would leave a gap between what was checked and what was read, and
     that gap is where an attack lives.
     """
-    source = deps.candidates.get_source_text(document.document_sha256, deps.extractor.profile_id)
+    source = deps.candidates.get_source_text(document.document_sha256, deps.source_profile_id)
     text = source.normalized_text if source is not None else ""
     raw = source.raw_text if source is not None else ""
 

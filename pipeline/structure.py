@@ -152,7 +152,7 @@ def _with_candidate_id(profile: CandidateProfile, candidate_id: str) -> Candidat
 
 
 def _sources_for(deps: Deps, documents: list[Any]) -> list[SourceText]:
-    profile_id = deps.extractor.profile_id
+    profile_id = deps.source_profile_id
     found: list[SourceText] = []
     for document in documents:
         source = deps.candidates.get_source_text(document.document_sha256, profile_id)

@@ -74,7 +74,5 @@ def source_for(deps: Any, documents: list[Any], document_id: UUID) -> Any:
     """The stored text for one document, or None if it is no longer held."""
     for document in documents:
         if document.document_id == document_id:
-            return deps.candidates.get_source_text(
-                document.document_sha256, deps.extractor.profile_id
-            )
+            return deps.candidates.get_source_text(document.document_sha256, deps.source_profile_id)
     return None
