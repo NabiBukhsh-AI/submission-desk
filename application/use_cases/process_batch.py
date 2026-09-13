@@ -18,9 +18,12 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from application.deps import Deps
+from application.notify import notify
 from application.use_cases.process_candidate import ProcessResult, process_candidate
 from domain.contracts.enums import RunStatus
+from domain.ports.notifiers import NotificationKind
 from domain.ports.sources import CandidateRef
+from domain.state_machine import requires_review
 
 #: What a batch reports per candidate when the run itself could not start.
 UNEXPECTED = "This candidate could not be processed. The others in this batch were unaffected."
@@ -44,6 +47,15 @@ class BatchSummary:
     @property
     def quarantined(self) -> int:
         return sum(1 for result in self.results if result.status is RunStatus.QUARANTINED)
+
+    @property
+    def flagged(self) -> int:
+        """Reached a person because something needs one, quarantine aside."""
+        return sum(
+            1
+            for result in self.results
+            if requires_review(result.status) and result.status is not RunStatus.QUARANTINED
+        )
 
     @property
     def reused(self) -> int:
@@ -105,6 +117,20 @@ def process_batch(
 
     if on_progress is not None:
         on_progress(total, total, "")
+
+    # Counts only; the notifier's allowlist would drop anything else. A batch
+    # that was entirely reused says nothing, because nobody has new work.
+    ready = summary.reviewable - summary.quarantined
+    if ready and summary.reused < len(summary.results):
+        notify(
+            deps,
+            NotificationKind.BATCH_READY,
+            ready_count=ready,
+            flagged_count=summary.flagged,
+            role_id=role_id,
+        )
+    if summary.quarantined:
+        notify(deps, NotificationKind.QUARANTINE_DETECTED, count=summary.quarantined)
 
     return summary
 

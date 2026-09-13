@@ -374,6 +374,26 @@ def check_source(deps: Any) -> Check:
     return Check("document source", Level.PASS, f"folder at {path}")
 
 
+def check_destinations(deps: Any) -> Check:
+    """Where results and notifications go. Named, not contacted."""
+    settings = deps.settings
+    if settings.demo_mode:
+        return Check("destinations", Level.PASS, "none: demo mode")
+
+    sinks = ", ".join(getattr(sink, "sink_id", "?") for sink in deps.sinks or ())
+    notifier = getattr(deps.notifier, "notifier_id", "none")
+    summary = f"results to {sinks or 'nowhere'}; notifications to {notifier}"
+
+    if notifier == "slack" and not settings.public_url:
+        return Check(
+            "destinations",
+            Level.WARN,
+            f"{summary}; messages will carry no link",
+            "Set PUBLIC_URL to where the interface is reachable.",
+        )
+    return Check("destinations", Level.PASS, summary)
+
+
 def run_all() -> list[Check]:
     """Every check, in the order somebody needs them."""
     settings = settings_from_env()
@@ -405,6 +425,7 @@ def run_all() -> list[Check]:
         check_pricing(deps),
         check_ocr(),
         check_source(deps),
+        check_destinations(deps),
         check_disk(settings),
         check_reviewer(deps.settings),
         check_demo_mode(settings),

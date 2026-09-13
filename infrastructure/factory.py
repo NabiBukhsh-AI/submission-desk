@@ -78,13 +78,49 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def load_env_file(path: Path | None = None) -> int:
+    """Read ``KEY=VALUE`` lines from ``.env`` into the environment.
+
+    Only names the environment does not already have: a value set by the
+    shell, a container or a service manager wins over the file, so the same
+    checkout works on a laptop with a ``.env`` and on a host that has none.
+    Blank lines and ``#`` comments are skipped; surrounding quotes are dropped.
+    ``ENV_FILE`` names a different file, or, set empty, no file at all — which
+    is what the test suite does. Returns how many names were set.
+    """
+    if path is None:
+        named = os.environ.get("ENV_FILE")
+        if named == "":
+            return 0
+        path = Path(named) if named else _repo_root() / ".env"
+    if not path.is_file():
+        return 0
+    loaded = 0
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        name = name.strip().removeprefix("export ").strip()
+        value = value.split(" #", 1)[0].strip()
+        for quote in ('"', "'"):
+            if value.startswith(quote) and value.endswith(quote) and value != quote:
+                value = value[1:-1]
+        if name and name not in os.environ:
+            os.environ[name] = value
+            loaded += 1
+    return loaded
+
+
 def settings_from_env(**overrides: object) -> Settings:
     """Read configuration once, at startup.
 
     Defaults are the offline ones: the fake model provider, blind mode on,
     calibration off. A fresh clone with no .env runs the demo, which is the
-    whole point of the defaults being where they are.
+    whole point of the defaults being where they are. A ``.env`` at the
+    repository root is read first, without overriding what is already set.
     """
+    load_env_file()
 
     def flag(name: str, default: bool) -> bool:
         raw = os.environ.get(name, "").strip().lower()
@@ -112,6 +148,9 @@ def settings_from_env(**overrides: object) -> Settings:
         sheets_spreadsheet_id=os.environ.get("SHEETS_SPREADSHEET_ID", "").strip(),
         slack_bot_token=os.environ.get("SLACK_BOT_TOKEN", "").strip(),
         slack_channel=os.environ.get("SLACK_CHANNEL", "").strip(),
+        public_url=(os.environ.get("PUBLIC_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "")
+        .strip()
+        .rstrip("/"),
         routing_policy_id=os.environ.get("MODEL_ROUTING_POLICY") or "routed",
         model_provider=(os.environ.get("MODEL_PROVIDER") or "fake").strip().lower(),
         model_api_key=os.environ.get("MODEL_API_KEY", "").strip(),

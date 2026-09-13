@@ -34,7 +34,7 @@ Haiku 4.5 costs about two cents and takes about twenty seconds. `make doctor`
 says whether a deployment will work and what to fix if not.
 
 `make check` runs the linters, the type checker, both pre-commit scanners and
-the offline test suite — 2,960 tests at the time of writing, none of which
+the offline test suite — 3,000 tests at the time of writing, none of which
 touch a network. `render.yaml` deploys the whole thing as one container on
 Render (RUNBOOK section 6a); the same `Dockerfile` runs anywhere Docker does.
 
@@ -170,7 +170,7 @@ one, in [docs/EVALUATION.md](docs/EVALUATION.md).
     prompts/         versioned prompt files.   rubrics/    role definitions.
     config/          limits, routing, tier bindings, pricing (empty).
     contracts/       exported JSON Schema, checked in CI against the models.
-    scripts/         operational tooling.       tests/      2,960 offline tests.
+    scripts/         operational tooling.       tests/      3,000 offline tests.
     data/samples/    the only directory under data/ that may be committed.
 
 The direction of dependencies — `domain` inward of `application` inward of

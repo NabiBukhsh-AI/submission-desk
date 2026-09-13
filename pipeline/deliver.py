@@ -23,12 +23,14 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from application.deps import Deps
+from application.notify import notify
 from domain.calibration import card_from, should_create, summary_of
 from domain.contracts.delivery import DeliveryRecord
 from domain.contracts.enums import DeliveryStatus, RunStatus
 from domain.contracts.errors import ErrorRecord
 from domain.contracts.run_state import DomainEvent, NodeResult, NodeStatus, RunState
 from domain.ports.calibration import embedding_text
+from domain.ports.notifiers import NotificationKind
 from domain.ports.sinks import AdapterError, AdapterResult, DeliveryPayload
 
 #: What a reviewer is told when delivery was refused for lack of a decision.
@@ -102,6 +104,15 @@ def node(state: RunState, deps: Deps) -> NodeResult:
     failed = [(sink_id, result) for sink_id, result in results if not result.ok]
 
     if failed:
+        # One message per run, naming every sink that refused. A retry that
+        # fails again says so again, which is what a retry is for.
+        notify(
+            deps,
+            NotificationKind.DELIVERY_FAILED,
+            failed_count=len(failed),
+            sink_id=", ".join(sink_id for sink_id, _ in failed),
+            error_code=next((r.error_code.value for _, r in failed if r.error_code), "unknown"),
+        )
         events.append(
             DomainEvent(
                 name="deliver.degraded",

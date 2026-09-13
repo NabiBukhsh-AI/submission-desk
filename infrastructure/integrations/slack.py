@@ -30,18 +30,21 @@ from infrastructure.integrations.retrying import classify_status, with_retries
 #: the call site.
 TEMPLATES: dict[NotificationKind, str] = {
     NotificationKind.BATCH_READY: (
-        "{ready_count} candidate(s) ready to review for {role_id}{flagged}. <{link}|Open the queue>"
+        "{ready_count} candidate(s) ready to review for {role_id}{flagged}."
     ),
     NotificationKind.DELIVERY_FAILED: (
         "{failed_count} result(s) could not be sent to {sink_id} ({error_code}). "
-        "They are saved and will retry. <{link}|Open operations>"
+        "They are saved and will retry."
     ),
     NotificationKind.QUARANTINE_DETECTED: (
         "{count} document(s) were flagged as containing content aimed at an "
-        "automated reader. Nothing was assessed and nothing was spent. "
-        "<{link}|Open the queue>"
+        "automated reader. Nothing was assessed and nothing was spent."
     ),
 }
+
+#: Appended when the notification carries a link. A deployment that has not
+#: said where its interface lives sends the sentence alone.
+LINK_LABEL = "Open the queue"
 
 
 class SlackTransportError(Exception):
@@ -121,16 +124,17 @@ def render(notification: Notification) -> str:
     fields = safe_payload(notification)
     flagged = fields.get("flagged_count", 0)
 
-    return TEMPLATES[notification.kind].format(
+    text = TEMPLATES[notification.kind].format(
         ready_count=fields.get("ready_count", 0),
         failed_count=fields.get("failed_count", 0),
         count=fields.get("count", 0),
         role_id=fields.get("role_id", "this role"),
         sink_id=fields.get("sink_id", "the destination"),
         error_code=fields.get("error_code", "unknown"),
-        link=fields.get("link", ""),
         flagged=f", {flagged} needing a closer look" if flagged else "",
     )
+    link = fields.get("link", "")
+    return f"{text} <{link}|{LINK_LABEL}>" if link else text
 
 
 class ConsoleNotifier:

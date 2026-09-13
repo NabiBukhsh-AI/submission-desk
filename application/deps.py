@@ -75,6 +75,9 @@ class Settings:
     sheets_spreadsheet_id: str = ""
     slack_bot_token: str = ""
     slack_channel: str = ""
+    #: Where the interface is reachable, for the link in a notification.
+    #: Empty means the message carries no link.
+    public_url: str = ""
     pipeline_version: str = "1"
     routing_policy_id: str = "routed"
     #: fake | anthropic. Anything else refuses at the first call.

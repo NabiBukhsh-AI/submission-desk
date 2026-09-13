@@ -30,7 +30,7 @@ from application.use_cases.process_batch import process_batch
 from application.use_cases.purge import DEFAULT_RETENTION_DAYS, purge
 from application.use_cases.retry_deliveries import retry_deliveries
 from domain.ports.sources import SourceUnavailable
-from infrastructure.factory import build_deps, settings_from_env
+from infrastructure.factory import build_deps, load_env_file, settings_from_env
 
 
 def _deps() -> Deps:
@@ -187,6 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     doctor.make_output_safe()
+    load_env_file()
     args = build_parser().parse_args(argv)
     if args.demo:
         # Set before anything reads configuration. The factory reads it once,

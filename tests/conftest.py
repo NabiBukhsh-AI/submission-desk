@@ -23,6 +23,9 @@ def offline_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     forgot to set this would pass locally, cost money, and fail in CI.
     """
     monkeypatch.setenv("MODEL_PROVIDER", "fake")
+    # And never read the developer's .env: a real Slack token or spreadsheet
+    # id in the file would turn an offline test into a live one.
+    monkeypatch.setenv("ENV_FILE", "")
 
 
 @pytest.fixture(autouse=True, scope="session")

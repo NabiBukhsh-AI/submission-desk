@@ -47,9 +47,12 @@ the same origin, and Tesseract — is section 6a:
 
 ## 2. Configuration
 
-Copy `.env.example` to `.env` and fill in what you need. Every variable in the
-example is read by the code and documented beside its name; the defaults run
-the offline system. Three things decide what a deployment is:
+Copy `.env.example` to `.env` and fill in what you need. The file is read at
+startup from the repository root; a value already in the environment wins
+over it, so a container or a service manager can set what it likes. Every
+variable in the example is read by the code and documented beside its name;
+the defaults run the offline system. Three things decide what a deployment
+is:
 
 | Setting | Offline default | A pilot |
 |---|---|---|
@@ -161,8 +164,12 @@ first, so a retry after a lost response does not write a duplicate.
 `chat:write` scope, install it to the workspace, and invite the bot to the
 channel (`/invite @your-app`). Set `SLACK_BOT_TOKEN` (`xoxb-…`) and
 `SLACK_CHANNEL` (the channel id, from the channel's details). Three messages
-exist — candidates ready, a delivery that failed, documents quarantined —
-each with counts and a link, never a name.
+exist, each with counts and never a name: *candidates ready* after a batch
+(an upload, a **Run on** from the queue, or `submission-desk process`),
+*documents quarantined* when a batch quarantined any, and *a delivery
+failed* when a sink refused a package. Set `PUBLIC_URL` to where the
+interface is reachable and each message ends with a link to the queue;
+Render supplies this itself as `RENDER_EXTERNAL_URL`.
 
 Refusals are classified once for all three: a bad credential or a missing
 share disables that integration for the session with the reason on screen; a
@@ -175,6 +182,17 @@ shapes are accepted and the error paths read real answers). No run against
 a real Google or Slack account was made in this sprint; the first one is the
 verification, and the doctor and the sentences above are what you will see
 if a share or a scope is missing.
+
+**Trying all three locally.** With the settings in `.env`:
+
+    submission-desk doctor                  # `document source: drive …`, `destinations: results to csv, sheets; notifications to slack`
+    submission-desk process --role ai-engineer   # reads the Drive folder; Slack gets "N candidate(s) ready"
+    make api-live                           # approve one in the interface
+    submission-desk deliver                 # a row appears in the sheet; a failure is posted to Slack
+
+The doctor names the destinations without contacting them; the first
+`process` and the first `deliver` are the calls that prove the shares and
+the scopes.
 
 ### Housekeeping
 
