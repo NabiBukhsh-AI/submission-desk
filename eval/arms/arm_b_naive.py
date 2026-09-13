@@ -92,7 +92,7 @@ def assess(
         # No schema on purpose. This arm asks for prose and parses it, which
         # is the thing being compared against; a schema here would make it a
         # worse version of arm C rather than a different architecture.
-        response_schema=None,  # type: ignore[arg-type]
+        response_schema=None,
         temperature=0.0,
         nonce=nonce,
     )

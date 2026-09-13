@@ -34,7 +34,7 @@ def cache_key(request: GenerationRequest, *, tier_binding_hash: str = "") -> str
     """
     schema = request.response_schema
     schema_fingerprint = getattr(schema, "__name__", str(schema))
-    if hasattr(schema, "model_json_schema"):
+    if schema is not None:
         schema_fingerprint += json.dumps(
             schema.model_json_schema(), sort_keys=True, separators=(",", ":")
         )
@@ -77,7 +77,11 @@ class ResponseCache:
         if stored is not None:
             response_json, usage_json = stored
             usage = json.loads(usage_json)
-            parsed = request.response_schema.model_validate_json(response_json)
+            parsed = (
+                request.response_schema.model_validate_json(response_json)
+                if request.response_schema is not None
+                else None
+            )
             return GenerationResult(
                 parsed=parsed,
                 raw_text=response_json,

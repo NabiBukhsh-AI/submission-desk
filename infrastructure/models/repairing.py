@@ -9,9 +9,13 @@ So: exactly one repair, at the same tier. Escalation to a stronger tier is a
 separate decision made by the routing layer above, which is why this class has
 no idea that tiers other than the one it was given exist.
 
-The repair prompt carries the prior output and the exact validation error, and
-deliberately does not resend the document. A sixty-page CV resent for a missing
-comma would cost more than the original call.
+The repair prompt carries the prior output, the exact validation error, and
+the document again. The document was left out until the first run against a
+real model: each call is a fresh conversation, so a model asked to add the
+quotation it left out — the most common complaint — had nothing to quote from,
+answered "no document provided", and the criterion was lost. Resending costs
+the input tokens of one more call; losing a criterion costs the recruiter the
+answer. The evaluation records both versions (``docs/EVALUATION.md``).
 """
 
 from __future__ import annotations
@@ -91,15 +95,15 @@ class RepairingClient:
     def _repair_request(
         self, request: GenerationRequest, failed: GenerationResult
     ) -> GenerationRequest:
-        """Ask again, showing the error and not the document.
+        """Ask again, showing the error, with the document still in front of it.
 
-        The original blocks are replaced by a single repair block. That is the
-        whole reason repair is cheap: the model already read the document, and
-        what it needs now is its own output and the complaint about it.
+        The repair block follows the original blocks. A stateless call has no
+        memory of the document, and most repairs are for a quotation that was
+        missing or too short — impossible to fix without the text.
         """
         template = self.repair_template or DEFAULT_REPAIR_TEMPLATE
         body = template.format(
-            schema_name=request.response_schema.__name__,
+            schema_name=getattr(request.response_schema, "__name__", "the schema"),
             previous_output=failed.raw_text[:4000],
             validation_error=(failed.validation_error or "")[:2000],
         )
@@ -108,7 +112,7 @@ class RepairingClient:
             call_site=request.call_site,
             tier=request.tier,
             system_prompt=request.system_prompt,
-            user_blocks=(PromptBlock(kind=BlockKind.REPAIR, content=body),),
+            user_blocks=(*request.user_blocks, PromptBlock(kind=BlockKind.REPAIR, content=body)),
             response_schema=request.response_schema,
             temperature=request.temperature,
             max_output_tokens=request.max_output_tokens,
@@ -135,13 +139,16 @@ a field you cannot support from what you were shown.
 
 
 def validate_response(
-    raw_text: str, schema: type[BaseModel]
+    raw_text: str, schema: type[BaseModel] | None
 ) -> tuple[BaseModel | None, str | None]:
     """Parse a response, returning either the object or the complaint.
 
     Returns rather than raises, because an invalid response is an ordinary
     event on this path and the repair layer needs the error text to send back.
+    A request with no schema asked for prose; there is nothing to validate.
     """
+    if schema is None:
+        return None, None
     try:
         return schema.model_validate_json(raw_text), None
     except ValidationError as error:

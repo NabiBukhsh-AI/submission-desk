@@ -29,7 +29,7 @@ OFFLINE := -m "not live and not smoke"
 # Bash it is. Demo mode is therefore a flag the commands take, so every target
 # runs the same way from either shell.
 
-.PHONY: help setup check test schemas rubric-lint demo run seed doctor api api-live web web-check corpus eval eval-holdout eval-accept eval-routing eval-calibration eval-fairness tune-thresholds check-pii check-secrets smoke clean
+.PHONY: help setup check test schemas rubric-lint demo run seed doctor api api-live web web-check corpus eval eval-holdout eval-accept eval-routing eval-calibration eval-fairness eval-baseline tune-thresholds check-pii check-secrets smoke clean
 
 help:
 	@echo "setup         create the virtual environment and install the project"
@@ -160,6 +160,12 @@ eval-calibration:
 # is uninterpretable, and the code refuses to print one.
 eval-fairness:
 	$(PY) -m eval.fairness.runner
+
+# The naive single-call baseline against the pipeline, on a real model. Needs
+# MODEL_PROVIDER, MODEL_API_KEY and the tier ids in the environment; spends
+# real money (about a dollar on Haiku for twelve cases, both arms).
+eval-baseline:
+	$(PY) -m eval.experiments.baseline
 
 # Sweep the two span thresholds over real and fabricated corpora, and print the
 # ROC table. The recommended operating point goes into config/limits.yaml and

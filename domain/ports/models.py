@@ -125,7 +125,9 @@ class GenerationRequest:
     tier: ModelTier
     system_prompt: str
     user_blocks: tuple[PromptBlock, ...]
-    response_schema: type[BaseModel]
+    #: None asks for prose and skips validation. Only the evaluation's naive
+    #: baseline does that; every pipeline call site has a schema.
+    response_schema: type[BaseModel] | None
     temperature: float = 0.0
     #: Ceilings the tier binding may lower, never raise. High, because a
     #: structured answer ends when its JSON does and a profile of a dense CV

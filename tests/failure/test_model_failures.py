@@ -174,9 +174,11 @@ def test_a_second_failure_is_not_repaired_again() -> None:
     assert result.validation_error
 
 
-def test_the_repair_does_not_resend_the_document() -> None:
-    """A sixty-page CV resent for a missing comma would cost more than the
-    original call. The model has already read it; what it needs is the error."""
+def test_the_repair_resends_the_document_with_the_error() -> None:
+    """Each call is a fresh conversation. A repair that showed the error and
+    not the document produced "no document provided" on the first real run:
+    the model could not add the quotation it had left out. The document goes
+    again, with the repair block after it."""
     inner = ScriptedModelClient(responses=[MALFORMED, VALID])
     client = RepairingClient(inner=inner)
 
@@ -184,8 +186,7 @@ def test_the_repair_does_not_resend_the_document() -> None:
 
     second = inner.calls[1]
     kinds = [block.kind for block in second.user_blocks]
-    assert kinds == [BlockKind.REPAIR]
-    assert not any(block.kind is BlockKind.DOCUMENT for block in second.user_blocks)
+    assert kinds == [BlockKind.DOCUMENT, BlockKind.REPAIR]
 
 
 def test_the_repair_quotes_the_actual_error() -> None:
@@ -195,7 +196,7 @@ def test_the_repair_quotes_the_actual_error() -> None:
 
     client.structured_generate(request())
 
-    repair_body = inner.calls[1].user_blocks[0].content
+    repair_body = inner.calls[1].user_blocks[-1].content
     assert "overall_score" in repair_body
 
 

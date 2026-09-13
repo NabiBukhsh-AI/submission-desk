@@ -54,10 +54,81 @@ rather than estimated, and every cost figure renders as "not configured" rather
 than as zero. With the stand-in, token counts are size estimates and every usage
 row is marked unmeasured, so the cost column is empty in both directions.
 
-**Any model's judgement.** Every run below used the deterministic stand-in. The
-figures measure whether the pipeline does the right thing with evidence, not
-whether a model finds the right evidence. That second measurement is the same
-command with `MODEL_PROVIDER` set, and it has not been run.
+**Any model's judgement — in the sections below this one.** Every run in
+"Measured results" used the deterministic stand-in and measures the pipeline.
+The section that follows is the same twelve cases against a real model, and
+against the naive one-call baseline, and it is the section to read first.
+
+## Against a real model: the naive baseline and the final system
+
+`make eval-baseline` (`eval/experiments/baseline.py`) runs the twelve cases
+twice on the same model: **arm B**, one call with the whole document and the
+whole rubric that returns a band — what somebody reaches for when told to
+"just use the LLM" — and **arm C**, the pipeline. Claude Haiku 4.5 on both
+tiers, priced at $1 / $5 per million tokens. Run on 2026-09-13, twice: before
+and after one fix the first run exposed.
+
+### What the first run found
+
+Two of nine criteria on the strong dev candidate and the blocker on the strong
+holdout candidate came back *unassessed* with the reason `repair_failed`. The
+repair prompt showed the model its error and not the document (ADR-004: "the
+model has already read it"). That is true of a conversation and false of an
+API call — each call is fresh — so a model asked to add the quotation it left
+out answered *"no document provided"*. Both strong candidates fell under the
+coverage gate and the pipeline reported `insufficient_information` where the
+gold label said `advance`. The repair now resends the document
+(`docs/DECISIONS/ADR-004`, amendment). Before and after,
+`eval/results/comparison/2026-09-13-comparison-before-repair-fix.md` and
+`-after-repair-fix.md`:
+
+| metric | B: one naive call | C before the fix | C after the fix |
+|---|---|---|---|
+| band accuracy | 100% [43.9–100] (n=3) | 33.3% [6.1–79.2] (n=3) | 66.7% [20.8–93.9] (n=3) |
+| abstention accuracy | 100% by construction (n=14) | 85.7% [60.1–96.0] (n=14) | 85.7% [60.1–96.0] (n=14) |
+| hallucination rate | not measurable | 3.7% [1.5–9.2] (n=107) | 0.0% [0.0–3.6] (n=103) |
+| forbidden-claim rate | 0.0% (n=7) | 0.0% (n=7) | 0.0% (n=7) |
+| integrity-flag accuracy | 83.3% [55.2–95.3] (n=12) | 100% [75.8–100] (n=12) | 100% [75.8–100] (n=12) |
+| criteria lost to repair | — | 3 | 0 |
+| cost per candidate | $0.0012 | $0.0233 | $0.0230 |
+| latency per candidate | 1.8 s | 21.8 s | 20.1 s |
+| a person sees a reason | never: one band, one sentence | 12 of 12 | 11 of 12 (one advanced cleanly) |
+
+### How to read it
+
+**The naive call wins on band accuracy, and that is the honest result.** On
+the three banded cases it named the band the labeller named; the pipeline
+got two of three after the fix. The remaining miss, **hold-101**, is a strong
+candidate who describes the work without the rubric's vocabulary. The model
+found evidence for four of nine criteria (59% of the rubric by weight), the
+70% coverage gate held, and the system said it did not know enough. The naive
+call said *advance* because nothing required it to show 70% of anything.
+Whether that gate is right for one-page CVs is a rubric setting — it is
+editable per role on the Roles page — not a model question.
+
+**What the naive call cannot do is the reason the pipeline exists.** It
+offers no quotation, so nothing it says can be checked: its hallucination
+rate is not low, it is *unmeasurable*. It answered both injected documents
+instead of refusing them (integrity 83%); the pipeline quarantined both before
+any model call, at zero cost. It gave *decline* to a CV that contradicts
+itself and to a capable person applying for the wrong job, with one sentence
+of justification each; the pipeline abstained on both and routed them to a
+person with the reason on the run. Its abstention accuracy is 100% only
+because it abstains on everything at the criterion level — it has no
+criterion level.
+
+**Hallucination moved between runs on the same model.** 4 of 107 quotations
+rejected in the first run, all on the keyword-stuffed CV (dev-008: the model
+stitched two bullets into one "quotation"); 0 of 103 in the second. Haiku is
+not deterministic across runs at temperature 0, and n≈100 is where a 4%
+rate is one document's worth of noise. Both figures are reported; neither is
+the rate.
+
+**Cost and time.** Twenty times the cost of the naive call — 2.3 cents
+against 0.12 — and eleven times the latency, for per-criterion evidence a
+person can click through to the page. Both numbers came from the provider's
+usage metadata and the entered prices, not from an estimate. A hundred
+candidates a week is about $2.30.
 
 ## The regression gate
 

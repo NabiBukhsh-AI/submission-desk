@@ -138,7 +138,11 @@ class ProviderModelClient:
             "messages": [{"role": "user", "content": "\n\n".join(rendered)}],
             "response_format": {
                 "type": "json_schema",
-                "schema": request.response_schema.model_json_schema(),
+                "schema": (
+                    request.response_schema.model_json_schema()
+                    if request.response_schema is not None
+                    else None
+                ),
             },
             "temperature": request.temperature,
             "max_output_tokens": min(request.max_output_tokens, binding.max_output_tokens),

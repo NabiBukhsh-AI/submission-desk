@@ -46,6 +46,11 @@ eval/results/calibration/*
 !eval/results/fairness/
 eval/results/fairness/*
 !eval/results/fairness/fairness.txt
+# The naive-baseline comparison on a real model: the two reports, not the scratch database.
+!eval/results/comparison/
+eval/results/comparison/*
+!eval/results/comparison/*-comparison*.md
+!eval/results/comparison/*-comparison*.json
 
 # Editor and OS
 .vscode/

@@ -15,8 +15,8 @@ claim depends on it.
 A protocol with one method, `structured_generate(GenerationRequest) ->
 GenerationResult`. `Usage` is part of the result type, so a call cannot happen
 without accounting. Around the innermost client, decorators that each do one
-thing: `RepairingClient` (exactly one schema repair, same tier, no document
-resent), `ResponseCache` (keyed on everything that determines a response),
+thing: `RepairingClient` (exactly one schema repair, same tier, the document
+resent — see the amendment below), `ResponseCache` (keyed on everything that determines a response),
 with the routing policy deciding the tier before the call and the budget guard
 refusing before the call. The provider adapter is thin: it builds the payload,
 hands it to an injected transport, and reads back the usage the provider
@@ -56,3 +56,16 @@ client only: a deterministic client gains nothing from it, and the fairness
 control arm measures the system's consistency with itself, which a cache would
 answer on its behalf. Five call sites are declared in one registry with their
 schema and prompt; a call to an undeclared site raises.
+
+## Amendment, 2026-09-13
+
+The repair originally did not resend the document ("the model has already
+read it; what it needs is the error"). That is true of a conversation and
+false of an API call: each call is fresh, and on the first run against a
+real model the most common repair — "supported evidence must quote the
+document" — came back as *no document provided*, losing the criterion. Two of
+nine criteria on the strong dev case and the blocker on the strong holdout
+case were lost this way, which put both under the coverage gate. The repair
+now carries the original blocks followed by the repair block. The cost is one
+more document's worth of input tokens per repair; the evaluation records the
+before and after.
