@@ -37,7 +37,6 @@ from infrastructure.models.repairing import RepairingClient
 from infrastructure.models.routing.policies import policy_for
 from infrastructure.models.stand_in import for_rubrics
 from infrastructure.models.transports import anthropic as anthropic_transport
-from infrastructure.models.transports import openrouter as openrouter_transport
 from infrastructure.observability.metrics_sql import SqliteMetricsReader
 from infrastructure.observability.redactor import Redactor
 from infrastructure.prompts.registry import PromptRegistry
@@ -154,7 +153,7 @@ STORED_STRINGS = {
 STORED_FLAGS = {"blind_mode": "blind_mode"}
 STORED_NUMBERS = {"retention_days": "retention_days"}
 #: One sealed key per provider, so switching providers does not lose the other.
-STORED_KEYS = {"anthropic": "anthropic_api_key", "openrouter": "openrouter_api_key"}
+STORED_KEYS = {"anthropic": "anthropic_api_key"}
 
 
 def stored_settings(settings: Settings, store: object, secrets: object) -> Settings:
@@ -225,10 +224,7 @@ def pricing_for(settings: Settings, fallback: Pricing) -> Pricing:
 
 
 #: The providers a deployment can name, and the transport each one uses.
-PROVIDERS = {
-    "anthropic": anthropic_transport.make_transport,
-    "openrouter": openrouter_transport.make_transport,
-}
+PROVIDERS = {"anthropic": anthropic_transport.make_transport}
 
 
 def build_models(
@@ -249,7 +245,7 @@ def build_models(
     key. It is not a model: every result it produces is a claim about the
     pipeline, and the evaluation report says so at the top.
 
-    With a named provider — ``anthropic`` or ``openrouter`` — the client is
+    With the ``anthropic`` provider the client is
     the provider adapter with that provider's transport, the tier bindings
     from the settings (the admin page, the environment, or config/models.yaml,
     in that order) and the key from the settings. A provider this file does

@@ -159,7 +159,7 @@ export type DecisionResult = { status: string; band: string | null; message: str
 
 export type AuthStatus = { setup_required: boolean; user: string | null }
 
-export type Provider = 'fake' | 'anthropic' | 'openrouter'
+export type Provider = 'fake' | 'anthropic'
 
 export type SettingsView = {
   values: Record<string, string>
@@ -201,7 +201,7 @@ export const api = {
       request<SettingsView>('/api/admin/settings', json({ changes, keys }, 'PUT')),
     clearKey: (provider: string) =>
       request<void>(`/api/admin/keys/${provider}`, { method: 'DELETE' }),
-    probe: () => request<Probe>('/api/admin/probe', { method: 'POST' }),
+    probe: () => request<Probe[]>('/api/admin/probe', { method: 'POST' }),
   },
   vocabulary: () => request<Vocabulary>('/api/vocabulary'),
   runs: (filter: string) => request<RunRow[]>(`/api/runs?filter=${encodeURIComponent(filter)}`),

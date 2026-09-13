@@ -1,0 +1,161 @@
+{
+  "$defs": {
+    "EmploymentResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "employer": {
+          "$ref": "#/$defs/Quoted"
+        },
+        "end": {
+          "$ref": "#/$defs/Quoted"
+        },
+        "start": {
+          "$ref": "#/$defs/Quoted"
+        },
+        "summary": {
+          "$ref": "#/$defs/Quoted"
+        },
+        "title": {
+          "$ref": "#/$defs/Quoted"
+        }
+      },
+      "required": [
+        "employer",
+        "title",
+        "start",
+        "end",
+        "summary"
+      ],
+      "title": "EmploymentResponse",
+      "type": "object"
+    },
+    "Quoted": {
+      "additionalProperties": false,
+      "description": "One recorded value and the text it was copied from.\n\nThe location is not asked for. A model does not know which page a chunk\ncame from or how the text was read, and asked for internal identifiers it\ninvents them; the node finds ``quote`` in the source and records the real\nprovenance, exactly as the span validator does for evidence.",
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "Quoted",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What the model records from a document; the profile is built from it.\n\n``candidate_id`` is accepted and ignored: the id is the system's, and a\nmodel asked for it would return the person's name.",
+  "properties": {
+    "artefact_links": {
+      "items": {
+        "$ref": "#/$defs/Quoted"
+      },
+      "title": "Artefact Links",
+      "type": "array"
+    },
+    "candidate_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Candidate Id"
+    },
+    "education": {
+      "items": {
+        "$ref": "#/$defs/Quoted"
+      },
+      "title": "Education",
+      "type": "array"
+    },
+    "employment": {
+      "items": {
+        "$ref": "#/$defs/EmploymentResponse"
+      },
+      "title": "Employment",
+      "type": "array"
+    },
+    "languages": {
+      "items": {
+        "$ref": "#/$defs/Quoted"
+      },
+      "title": "Languages",
+      "type": "array"
+    },
+    "partial": {
+      "default": false,
+      "title": "Partial",
+      "type": "boolean"
+    },
+    "technologies": {
+      "items": {
+        "$ref": "#/$defs/Quoted"
+      },
+      "title": "Technologies",
+      "type": "array"
+    },
+    "total_years_claimed": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Quoted"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "unparsed_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unparsed Reason"
+    }
+  },
+  "title": "ProfileResponse",
+  "type": "object"
+}

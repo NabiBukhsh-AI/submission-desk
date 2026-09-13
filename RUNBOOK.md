@@ -50,7 +50,7 @@ the offline system. Three things decide what a deployment is:
 
 | Setting | Offline default | A pilot |
 |---|---|---|
-| `MODEL_PROVIDER` | `fake` — recorded fixtures, then the deterministic stand-in | `anthropic` or `openrouter`, with the key and tier bindings — set on the admin page or in the environment (section 6) |
+| `MODEL_PROVIDER` | `fake` — recorded fixtures, then the deterministic stand-in | `anthropic`, with the key and tier bindings — set on the admin page or in the environment (section 6) |
 | `DEMO_MODE` | off | off. On, the system reads only the synthetic corpus and cannot send anything |
 | `REVIEWER_ID` | unset — nothing can be approved | the reviewer's identifier, because every decision is attributed |
 
@@ -221,48 +221,39 @@ Restore from backup; there is no other copy of a decision.
 
 ## 6. The model provider
 
-Two providers are wired, and the offline stand-in is the third:
+One provider is wired — Anthropic, through its own SDK — and the offline
+stand-in is the other:
 
 | Provider | Key from | Models the admin page offers | Cost |
 |---|---|---|---|
 | `anthropic` | console.anthropic.com → API keys (`sk-ant-…`) | `claude-haiku-4-5` ($1 / $5), `claude-sonnet-5` ($2 / $10), `claude-opus-5` ($5 / $25) per million input / output tokens | paid |
-| `openrouter` | openrouter.ai/keys (`sk-or-…`) | `inclusionai/ling-3.0-flash-fin:free`, `dots-studio/dots-3-note-preview:free` | free tiers, rate-limited |
 | `fake` | — | — | nothing |
 
-The prices are what the vendors published when this was written; the fields
-on the admin page are editable because they change. Any other model id the
-provider serves can be typed in.
+The prices are what Anthropic published when this was written; the fields on
+the admin page are editable because they change. Any other `claude-…` model
+id can be typed in; anything else is refused on save, because a model the
+provider does not serve fails every call with a 404.
 
-To run against a real provider, on the admin page (or in the environment):
+To run against the provider, on the admin page (or in the environment):
 
-1. Choose the provider and paste its key. The key is sealed before it is
-   stored.
+1. Paste the key. It is sealed before it is stored.
 2. Pick a model per tier. The cheap tier reads every document; the strong tier
-   handles criteria the rubric marks high-stakes. A preset fills the model id
-   and both prices; zero is a real price for a free model.
-3. Save, then **Test the connection**. That makes one tiny structured call and
-   reports what the provider said and what it cost — the only time the
-   system contacts a provider on purpose without a candidate.
+   handles criteria the rubric marks high-stakes and the escalations. A preset
+   fills the model id and both prices. Haiku 4.5 on both tiers is the cheap,
+   good setup — a CV costs a few cents.
+3. Save, then **Test the connection**. That makes one tiny structured call
+   per tier and reports what the provider said and what it cost — the only
+   time the system contacts the provider on purpose without a candidate.
 4. Start the API without demo mode (`make api-live`) so uploads are accepted.
    `make api` is demo mode: the stand-in answers whatever the page says.
 
-The free OpenRouter models are usable and slow to be trusted: they think
-before answering (reasoning is switched off in the request, or the whole
-output budget goes on the thinking), they do not all take a JSON schema (the
-request is retried as plain JSON), and they often mark a criterion supported
-without quoting the document, which the contract refuses and the one repair —
-sent without the document, by design (ADR-004) — cannot add. Such a criterion
-ends as insufficient evidence rather than a made-up quote. A CV through Claude
-Haiku 4.5 costs about three cents and follows the contract.
+Structured output is asked for as a JSON schema (`output_config`), so the
+first text block is JSON matching the contract; responses are streamed so a
+long profile does not trip a request timeout. Every provider failure — a
+rejected key, a rate limit, an unknown model, a safety refusal — reaches the
+queue as a sentence saying what to do, never a traceback.
 
-Structured output is asked for as a JSON schema on both providers. OpenRouter's
-free models do not all honour `response_format`; when one refuses, the same
-request is sent once more with the schema described in the prompt, and the
-answer is validated against the contract either way. Every provider failure —
-a rejected key, no credit, a rate limit, a refusal — reaches the queue as a
-sentence saying what to do, never a traceback.
-
-A third provider is one file: a `make_transport(api_key, base_url)` in
+A second provider is one file: a `make_transport(api_key, base_url)` in
 `infrastructure/models/transports/` returning `transport(payload, *, timeout)
 -> {"id", "text", "usage": {"input_tokens", "output_tokens",
 "cached_input_tokens"}}`, registered in `PROVIDERS` in

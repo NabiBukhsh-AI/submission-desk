@@ -45,8 +45,7 @@ dependencies = [
     # else; uvicorn serves it.
     "fastapi>=0.115",
     "uvicorn>=0.30",
-    # Anthropic's own client for the anthropic provider. OpenRouter is one
-    # POST and uses the standard library.
+    # Anthropic's own client, the one model provider.
     "anthropic>=1.5",
     # Provider keys the admin page saves are sealed at rest (Fernet), and the
     # session cookie is signed. The stdlib hashes passwords (scrypt) but has no

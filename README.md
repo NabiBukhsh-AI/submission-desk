@@ -36,8 +36,8 @@ one. The React one needs Node and two terminals:
     make web       # the frontend on :5173, proxying /api to it
 
 The first visit creates the one admin account; after that the same form signs
-in. **Settings** in the top bar is the admin page: choose Anthropic or
-OpenRouter, paste the key, pick a model per tier, test the connection. Start
+in. **Settings** in the top bar is the admin page: paste the Anthropic key,
+pick a Claude model per tier, test the connection. Start
 the API with `make api-live` instead to accept real documents. Both interfaces
 render what the use cases return; neither holds business logic, and the same
 architecture test walks both.

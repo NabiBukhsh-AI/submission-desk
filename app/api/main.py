@@ -196,16 +196,18 @@ def admin_clear_key(provider: str, _user: str = Guarded) -> None:
 
 
 @app.post("/api/admin/probe")
-def admin_probe(_user: str = Guarded) -> dict[str, Any]:
-    """One tiny call through the configured provider, and what it cost."""
-    result = admin.probe_provider(deps())
-    return {
-        "ok": result.ok,
-        "message": result.message,
-        "input_tokens": result.input_tokens,
-        "output_tokens": result.output_tokens,
-        "tier": result.tier,
-    }
+def admin_probe(_user: str = Guarded) -> list[dict[str, Any]]:
+    """One tiny call per tier through the configured provider, and what it cost."""
+    return [
+        {
+            "ok": result.ok,
+            "message": result.message,
+            "input_tokens": result.input_tokens,
+            "output_tokens": result.output_tokens,
+            "tier": result.tier,
+        }
+        for result in admin.probe_provider(deps())
+    ]
 
 
 def _json(value: Any) -> Any:

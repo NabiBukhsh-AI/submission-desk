@@ -14,30 +14,18 @@ import { ApiError, api, type Probe, type Provider, type SettingsView } from '@/l
 // because prices change and this page is where the change is recorded.
 type Preset = { id: string; label: string; input: string; output: string }
 
-const PRESETS: Record<Provider, Preset[]> = {
-  fake: [],
-  anthropic: [
-    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', input: '1', output: '5' },
-    { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', input: '2', output: '10' },
-    { id: 'claude-opus-5', label: 'Claude Opus 5', input: '5', output: '25' },
-  ],
-  openrouter: [
-    { id: 'inclusionai/ling-3.0-flash-fin:free', label: 'Ling 3.0 Flash (free)', input: '0', output: '0' },
-    { id: 'dots-studio/dots-3-note-preview:free', label: 'dots 3 note preview (free)', input: '0', output: '0' },
-  ],
-}
+const PRESETS: Preset[] = [
+  { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', input: '1', output: '5' },
+  { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', input: '2', output: '10' },
+  { id: 'claude-opus-5', label: 'Claude Opus 5', input: '5', output: '25' },
+]
 
 const PROVIDER_LABELS: Record<Provider, string> = {
   fake: 'Offline stand-in (no API, no cost)',
   anthropic: 'Anthropic (Claude)',
-  openrouter: 'OpenRouter',
 }
 
-const KEY_HELP: Record<Provider, string> = {
-  fake: '',
-  anthropic: 'From console.anthropic.com → API keys. Starts with sk-ant-.',
-  openrouter: 'From openrouter.ai/keys. Starts with sk-or-.',
-}
+const KEY_HELP = 'From console.anthropic.com → API keys. Starts with sk-ant-.'
 
 const EDITABLE = [
   'model_provider',
@@ -58,7 +46,7 @@ export function Admin() {
   const [values, setValues] = useState<Record<string, string>>({})
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
-  const [probe, setProbe] = useState<Probe | null>(null)
+  const [probe, setProbe] = useState<Probe[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const load = () =>
@@ -207,7 +195,7 @@ export function Admin() {
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{KEY_HELP[provider]}</p>
+                <p className="text-xs text-muted-foreground">{KEY_HELP}</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="base-url">Base URL (optional)</Label>
@@ -229,8 +217,8 @@ export function Admin() {
           <CardHeader>
             <CardTitle>Models and prices</CardTitle>
             <CardDescription>
-              The cheap tier reads every document; the strong tier is used where the rubric marks a criterion
-              high-stakes. Prices are USD per million tokens; zero is a real price for a free model.
+              The cheap tier reads every document; the strong tier handles criteria the rubric marks high-stakes
+              and the escalations. Haiku 4.5 on both is the cheap, good setup. Prices are USD per million tokens.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-2">
@@ -238,7 +226,7 @@ export function Admin() {
               <fieldset key={tier} className="space-y-3">
                 <legend className="text-sm font-medium capitalize">{tier} tier</legend>
                 <div className="flex flex-wrap gap-1.5">
-                  {PRESETS[provider].map((preset) => (
+                  {PRESETS.map((preset) => (
                     <Button
                       key={preset.id}
                       type="button"
@@ -330,25 +318,27 @@ export function Admin() {
         </Button>
         <span className="text-xs text-muted-foreground">
           <KeyRound className="mr-1 inline size-3.5" aria-hidden="true" />
-          The test makes one tiny call through the saved provider and reports what it cost.
+          The test makes one tiny call per tier through the saved provider and reports what each cost.
         </span>
       </div>
 
-      {probe && (
-        <Alert variant={probe.ok ? 'default' : 'destructive'} role="status">
+      {probe?.map((result) => (
+        <Alert key={result.tier} variant={result.ok ? 'default' : 'destructive'} role="status">
           <PlugZap aria-hidden="true" />
-          <AlertTitle>{probe.ok ? 'The provider answered.' : 'The provider did not answer correctly.'}</AlertTitle>
+          <AlertTitle>
+            {result.tier.replace('tier_', '')} tier: {result.ok ? 'the provider answered.' : 'not working.'}
+          </AlertTitle>
           <AlertDescription>
-            {probe.message}
-            {probe.tier && (
+            {result.message}
+            {result.ok && (
               <>
                 {' '}
-                ({probe.tier.replace('tier_', '')} tier, {probe.input_tokens} in / {probe.output_tokens} out tokens)
+                ({result.input_tokens} in / {result.output_tokens} out tokens)
               </>
             )}
           </AlertDescription>
         </Alert>
-      )}
+      ))}
     </section>
   )
 }

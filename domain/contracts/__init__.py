@@ -43,8 +43,11 @@ from domain.contracts.responses import (
     ComposedQuestion,
     ComposedRequest,
     CompositionResponse,
+    EmploymentResponse,
     EvidenceCandidate,
     InjectionVerdict,
+    ProfileResponse,
+    Quoted,
 )
 from domain.contracts.review import Override, ReviewDecision
 from domain.contracts.routing import ModelRoutingDecision
@@ -88,6 +91,7 @@ EXPORTED_MODELS: tuple[type[Contract], ...] = (
     OffsetRun,
     Override,
     PageSpan,
+    ProfileResponse,
     Provenance,
     Recommendation,
     ReviewDecision,
@@ -102,6 +106,7 @@ RESPONSE_MODELS: tuple[type[Contract], ...] = (
     AssessmentResponse,
     CompositionResponse,
     InjectionVerdict,
+    ProfileResponse,
 )
 
 __all__ = [
@@ -132,6 +137,7 @@ __all__ = [
     "DerivationStep",
     "DocumentRole",
     "EmploymentEntry",
+    "EmploymentResponse",
     "ErrorRecord",
     "EscalationState",
     "EvaluationCase",
@@ -152,8 +158,10 @@ __all__ = [
     "Override",
     "OverrideReason",
     "PageSpan",
+    "ProfileResponse",
     "Provenance",
     "ProvenancedField",
+    "Quoted",
     "Recommendation",
     "ReviewAction",
     "ReviewDecision",

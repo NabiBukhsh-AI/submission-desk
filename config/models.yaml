@@ -18,13 +18,17 @@ tiers:
     # Provider model identifier. Read from MODEL_CHEAP_ID when unset here, so a
     # deployment can bind models without editing a committed file.
     model: ""
-    max_output_tokens: 2048
-    timeout_s: 60
+    # A ceiling, not a budget: structured answers stop when the JSON is
+    # complete, and real usage is what the ledger counts. Set high enough that
+    # a dense CV's profile is never cut mid-string.
+    max_output_tokens: 8192
+    # Per chunk while streaming, so a long answer is not a slow one.
+    timeout_s: 120
 
   tier_strong:
     model: ""
-    max_output_tokens: 4096
-    timeout_s: 120
+    max_output_tokens: 8192
+    timeout_s: 180
 
   # Embeddings for the calibration index. A separate binding because an
   # embedding model is not a chat model and sharing the field would invite

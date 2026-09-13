@@ -42,8 +42,11 @@ EDITABLE = (
     "blind_mode",
     "retention_days",
 )
-PROVIDERS = ("fake", "anthropic", "openrouter")
-KEY_SETTINGS = {"anthropic": "anthropic_api_key", "openrouter": "openrouter_api_key"}
+PROVIDERS = ("fake", "anthropic")
+KEY_SETTINGS = {"anthropic": "anthropic_api_key"}
+#: Every model the provider serves is named this way. A tier bound to
+#: anything else fails every call with "not found", so it is refused here.
+MODEL_PREFIX = "claude-"
 
 
 class AdminRefused(Exception):
@@ -163,6 +166,14 @@ def _check(changes: dict[str, str], keys: dict[str, str]) -> None:
     if provider is not None and provider not in PROVIDERS:
         raise AdminRefused(f"Unknown provider {provider!r}. Choose one of: {', '.join(PROVIDERS)}.")
 
+    for name in ("model_cheap_id", "model_strong_id"):
+        model = changes.get(name, "").strip()
+        if model and not model.startswith(MODEL_PREFIX):
+            raise AdminRefused(
+                f"{name}: {model!r} is not a model the provider serves. "
+                f"Model identifiers start with {MODEL_PREFIX!r}."
+            )
+
     for name in PRICE_SETTINGS:
         value = changes.get(name, "").strip()
         if value and _price(value) is None:
@@ -220,16 +231,23 @@ class ProbeResult:
     tier: str = ""
 
 
-def probe_provider(deps: Deps) -> ProbeResult:
-    """One tiny call through the configured client, and what it cost.
+def probe_provider(deps: Deps) -> list[ProbeResult]:
+    """One tiny call per tier through the configured client, and what each cost.
 
-    Not a health check the doctor runs: this spends money on purpose, once,
-    when an admin presses the button, so that "the key works" is a measured
-    fact rather than the absence of a typo.
+    Every tier, because each is bound to its own model and a typo in the
+    strong one only surfaces on the first escalation otherwise.
     """
+    from domain.contracts.enums import ModelTier  # noqa: PLC0415 - a value, not a decision
+
+    return [_probe_tier(deps, tier) for tier in (ModelTier.CHEAP, ModelTier.STRONG)]
+
+
+def _probe_tier(deps: Deps, tier: Any) -> ProbeResult:
+    """Not a health check the doctor runs: this spends money on purpose,
+    once, when an admin presses the button, so that "the key works" is a
+    measured fact rather than the absence of a typo."""
     from pydantic import BaseModel  # noqa: PLC0415
 
-    from domain.contracts.enums import ModelTier  # noqa: PLC0415 - a value, not a decision
     from domain.ports.models import (  # noqa: PLC0415
         BlockKind,
         GenerationRequest,
@@ -241,11 +259,11 @@ def probe_provider(deps: Deps) -> ProbeResult:
         ok: bool
 
     if deps.models is None:
-        return ProbeResult(False, "No model client is configured.")
+        return ProbeResult(False, "No model client is configured.", tier=tier.value)
 
     request = GenerationRequest(
         call_site="assess.criterion",
-        tier=ModelTier.CHEAP,
+        tier=tier,
         system_prompt='Reply with the JSON object {"ok": true} and nothing else.',
         user_blocks=(PromptBlock(kind=BlockKind.DOCUMENT, content="ping"),),
         response_schema=Probe,
@@ -256,9 +274,11 @@ def probe_provider(deps: Deps) -> ProbeResult:
     try:
         result: Any = deps.models.structured_generate(request)
     except ModelUnavailable as refused:
-        return ProbeResult(False, str(refused))
+        return ProbeResult(False, str(refused), tier=tier.value)
     except TimeoutError:
-        return ProbeResult(False, "The provider did not respond within thirty seconds.")
+        return ProbeResult(
+            False, "The provider did not respond within thirty seconds.", tier=tier.value
+        )
 
     if not result.ok:
         return ProbeResult(

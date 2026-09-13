@@ -13,6 +13,7 @@ to tell which two.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -21,11 +22,13 @@ from application.deps import Deps
 from domain.contracts.enums import RunStatus
 from domain.contracts.errors import ErrorRecord
 from domain.contracts.profile import CandidateProfile, EmploymentEntry, ProvenancedField
+from domain.contracts.responses import ProfileResponse, Quoted
 from domain.contracts.run_state import DomainEvent, NodeResult, NodeStatus, RunState
-from domain.contracts.source_text import SourceText
+from domain.contracts.source_text import Provenance, SourceText
 from domain.ports.models import BlockKind, GenerationRequest, ModelUnavailable, PromptBlock
 from domain.provenance import chunking
 from domain.provenance.merge import merge_profiles
+from domain.provenance.normalization import normalize
 
 #: Input ceiling for one structuring call, in tokens. A document above it is
 #: read in page groups and merged.
@@ -112,7 +115,7 @@ def _profile_from(
                     document_id=source.document_id,
                 ),
             ),
-            response_schema=CandidateProfile,
+            response_schema=ProfileResponse,
             temperature=0.0,
             nonce=state.nonce or "",
         )
@@ -120,8 +123,8 @@ def _profile_from(
         result = deps.models.structured_generate(request)
         repaired = repaired or result.repaired
 
-        if result.ok and isinstance(result.parsed, CandidateProfile):
-            partials.append(_with_candidate_id(result.parsed, state.candidate_id))
+        if result.ok and isinstance(result.parsed, ProfileResponse):
+            partials.append(_profile(result.parsed, state.candidate_id, source))
             continue
 
         # Repair already had its one attempt inside the model layer. What
@@ -142,13 +145,81 @@ def _profile_from(
     return merge_profiles(partials), len(chunks), repaired
 
 
-def _with_candidate_id(profile: CandidateProfile, candidate_id: str) -> CandidateProfile:
-    """The candidate id is ours, not the model's.
+def _profile(response: ProfileResponse, candidate_id: str, source: SourceText) -> CandidateProfile:
+    """The stored profile, built from what the model recorded.
 
-    A model asked for it would return whatever the document called the person,
-    which is a name, and names are exactly what blind mode removes.
+    The candidate id is ours, not the model's: asked for it, a model returns
+    whatever the document called the person, which is a name, and names are
+    exactly what blind mode removes. Each quote is located in the source and
+    becomes real provenance; a quote that is not there leaves the value with
+    none, which the reviewer can see, rather than a location that is made up.
     """
-    return profile.model_copy(update={"candidate_id": candidate_id})
+
+    def field(quoted: Quoted | None, value: Any = None) -> ProvenancedField[Any]:
+        if quoted is None:
+            return ProvenancedField(value=None)
+        return ProvenancedField(
+            value=quoted.value if value is None else value,
+            provenance=_locate(quoted.quote, source),
+            confidence=quoted.confidence,
+        )
+
+    years = response.total_years_claimed
+
+    return CandidateProfile(
+        candidate_id=candidate_id,
+        employment=[
+            EmploymentEntry(
+                employer=field(entry.employer),
+                title=field(entry.title),
+                start=field(entry.start),
+                end=field(entry.end),
+                summary=field(entry.summary),
+            )
+            for entry in response.employment
+        ],
+        education=[field(item) for item in response.education],
+        technologies=[field(item) for item in response.technologies],
+        languages=[field(item) for item in response.languages],
+        artefact_links=[field(item) for item in response.artefact_links],
+        # The number the document states, read off the text it stated it in.
+        total_years_claimed=field(years, _number(years.value)) if years and years.value else None,
+        partial=response.partial,
+        unparsed_reason=response.unparsed_reason,
+    )
+
+
+def _number(text: str | None) -> float | None:
+    found = re.search(r"\d+(?:\.\d+)?", text or "")
+    return float(found.group()) if found else None
+
+
+def _locate(quote: str | None, source: SourceText) -> list[Provenance]:
+    """Where a quotation sits in the document, or nowhere.
+
+    Same rules as the span validator: the quote is normalised the way the
+    source was, and found verbatim or not at all. The page is read off the
+    offset, never taken from the model.
+    """
+    needle = normalize(quote or "")
+    start = source.normalized_text.find(needle) if needle else -1
+    if start < 0:
+        return []
+    end = start + len(needle)
+    pages = [page for page in source.pages if page.norm_start < end and start < page.norm_end]
+    if not pages:
+        return []
+    return [
+        Provenance(
+            document_id=source.document_id,
+            page_start=pages[0].page_number,
+            page_end=pages[-1].page_number,
+            norm_start=start,
+            norm_end=end,
+            extraction_method=pages[0].extraction_method,
+            normalization_profile_id=source.normalization_profile_id,
+        )
+    ]
 
 
 def _sources_for(deps: Deps, documents: list[Any]) -> list[SourceText]:

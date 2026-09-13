@@ -1,11 +1,11 @@
 ---
 id: structure/profile
-version: 1
+version: 2
 purpose: >-
   Turn free-form CV prose into structured employment history, with every field
   carrying the text it came from.
 inputs: []
-output_schema: CandidateProfile
+output_schema: ProfileResponse
 invariants:
   - "Every value is copied from the document character for character"
   - "A field with no support in the document is null, never inferred"
@@ -32,8 +32,10 @@ seniority level from a job title, and do not fill a field with something
 plausible because the field exists. A null field is a true statement about the
 document. A guessed one is not, and someone will act on it.
 
-For each value you record, give the text it came from and where in the document
-that text appears.
+For each value you record, give the exact text it came from as `quote`: a
+short run of the document, character for character, that contains the value.
+The system finds the quote in the document and records where it is; you do
+not report pages or positions.
 
 Do not record, infer, or comment on: age, gender, nationality, ethnicity,
 religion, marital status, family status, disability, personality, culture fit,

@@ -164,7 +164,7 @@ RESPONSE_FIELDS = _all_response_fields()
 
 def test_there_are_response_models_to_check() -> None:
     """A silent pass because nothing was collected would be the worst outcome."""
-    assert len(RESPONSE_MODELS) == 3
+    assert len(RESPONSE_MODELS) == 4
     assert len(RESPONSE_FIELDS) > 10
 
 

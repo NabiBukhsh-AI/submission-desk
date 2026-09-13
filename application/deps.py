@@ -69,7 +69,7 @@ class Settings:
     source_adapter: str = "local"
     pipeline_version: str = "1"
     routing_policy_id: str = "routed"
-    #: fake | anthropic | openrouter. Anything else refuses at the first call.
+    #: fake | anthropic. Anything else refuses at the first call.
     model_provider: str = "fake"
     #: The active provider's credential. Never logged, never returned to a
     #: browser; the doctor reports presence only.

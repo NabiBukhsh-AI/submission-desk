@@ -55,6 +55,50 @@ class EvidenceCandidate(Contract):
         return self
 
 
+class Quoted(Contract):
+    """One recorded value and the text it was copied from.
+
+    The location is not asked for. A model does not know which page a chunk
+    came from or how the text was read, and asked for internal identifiers it
+    invents them; the node finds ``quote`` in the source and records the real
+    provenance, exactly as the span validator does for evidence.
+    """
+
+    value: str | None = None
+    #: Long enough for a role's whole summary block, which is what a model
+    #: quotes for ``summary`` and what a reviewer wants highlighted for it.
+    quote: str | None = Field(default=None, max_length=2000)
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class EmploymentResponse(Contract):
+    employer: Quoted
+    title: Quoted
+    start: Quoted
+    end: Quoted
+    summary: Quoted
+
+
+class ProfileResponse(Contract):
+    """What the model records from a document; the profile is built from it.
+
+    ``candidate_id`` is accepted and ignored: the id is the system's, and a
+    model asked for it would return the person's name.
+    """
+
+    candidate_id: str | None = None
+    employment: list[EmploymentResponse] = Field(default_factory=list)
+    education: list[Quoted] = Field(default_factory=list)
+    technologies: list[Quoted] = Field(default_factory=list)
+    languages: list[Quoted] = Field(default_factory=list)
+    artefact_links: list[Quoted] = Field(default_factory=list)
+    #: As written — "8 years", "over a decade" — never a number the model
+    #: worked out. A numeric field is how a score would get in.
+    total_years_claimed: Quoted | None = None
+    partial: bool = False
+    unparsed_reason: str | None = None
+
+
 class AssessmentResponse(Contract):
     """The answer to one criterion, for one candidate."""
 

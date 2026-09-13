@@ -58,19 +58,18 @@ PROFILE_JSON = json.dumps(
         "candidate_id": "cand-0007",
         "employment": [
             {
-                "employer": {"value": "Acme Payments", "provenance": [], "conflicts": []},
-                "title": {"value": "Lead Engineer", "provenance": [], "conflicts": []},
-                "start": {"value": "2021", "provenance": [], "conflicts": []},
-                "end": {"value": "present", "provenance": [], "conflicts": []},
+                "employer": {"value": "Acme Payments", "quote": "Acme Payments, Lead Engineer"},
+                "title": {"value": "Lead Engineer", "quote": "Acme Payments, Lead Engineer"},
+                "start": {"value": "2021", "quote": "2021 to present"},
+                "end": {"value": "present", "quote": "2021 to present"},
                 "summary": {
                     "value": "Owned a multi-service payments backend",
-                    "provenance": [],
-                    "conflicts": [],
+                    "quote": "Owned a multi-service payments backend",
                 },
             }
         ],
-        "education": [{"value": "BSc Computer Science", "provenance": [], "conflicts": []}],
-        "technologies": [{"value": "Python", "provenance": [], "conflicts": []}],
+        "education": [{"value": "BSc Computer Science", "quote": "BSc Computer Science"}],
+        "technologies": [{"value": "Python", "quote": "not in the document at all"}],
         "languages": [],
         "artefact_links": [],
         "partial": False,
@@ -211,6 +210,34 @@ def test_the_candidate_id_is_ours_not_the_models(deps: Deps) -> None:
     result, _ = run_structure(deps, CLEAN_CV, [hijacked])
 
     assert result.state.profile.candidate_id == "cand-0007"
+
+
+def test_provenance_is_located_by_the_node_not_reported_by_the_model(deps: Deps) -> None:
+    """A model asked for pages, offsets and internal identifiers invents them —
+    page 0 was the real failure. It gives the text it copied from; the node
+    finds that text and records where it is."""
+    result, _ = run_structure(deps, CLEAN_CV, [PROFILE_JSON])
+
+    entry = result.state.profile.employment[0]
+    located = entry.employer.provenance[0]
+    assert located.page_start == 1
+    assert CLEAN_CV[located.norm_start : located.norm_end] == "Acme Payments, Lead Engineer"
+    assert located.normalization_profile_id == deps.source_profile_id
+    # A quote that is not in the document leaves the value without a location.
+    assert result.state.profile.technologies[0].value == "Python"
+    assert result.state.profile.technologies[0].provenance == []
+
+
+def test_years_are_recorded_as_written_and_read_as_a_number(deps: Deps) -> None:
+    stated = json.dumps(
+        {"total_years_claimed": {"value": "8 years", "quote": "8 years of experience"}}
+    )
+
+    result, _ = run_structure(deps, CLEAN_CV + " 8 years of experience.", [stated])
+
+    years = result.state.profile.total_years_claimed
+    assert years is not None and years.value == 8.0
+    assert years.provenance[0].norm_start == len(CLEAN_CV) + 1
 
 
 # --- the degraded path ----------------------------------------------------------------

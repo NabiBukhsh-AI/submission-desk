@@ -127,8 +127,11 @@ class GenerationRequest:
     user_blocks: tuple[PromptBlock, ...]
     response_schema: type[BaseModel]
     temperature: float = 0.0
-    max_output_tokens: int = 2048
-    timeout_s: float = 60.0
+    #: Ceilings the tier binding may lower, never raise. High, because a
+    #: structured answer ends when its JSON does and a profile of a dense CV
+    #: cut mid-string is a validation failure that costs a repair.
+    max_output_tokens: int = 8192
+    timeout_s: float = 120.0
     seed: int | None = None
     cache_hint: bool = False
     #: Regenerated per run. Document content cannot forge a delimiter it has

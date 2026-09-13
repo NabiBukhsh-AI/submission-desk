@@ -135,7 +135,6 @@ class StandInModelClient:
 
         return json.dumps(
             {
-                "candidate_id": "eval-candidate",
                 "partial": not roles,
                 "employment": [
                     {

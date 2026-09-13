@@ -15,8 +15,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from domain.contracts.enums import ModelTier
-from domain.contracts.profile import CandidateProfile
-from domain.contracts.responses import AssessmentResponse, CompositionResponse, InjectionVerdict
+from domain.contracts.responses import (
+    AssessmentResponse,
+    CompositionResponse,
+    InjectionVerdict,
+    ProfileResponse,
+)
 
 
 @dataclass(frozen=True)
@@ -52,7 +56,7 @@ CALL_REGISTRY: dict[str, CallSpec] = {
             "semantic reading. A regular expression cannot resolve 'led the platform "
             "team from spring 2022' into a role, an employer, and a start date."
         ),
-        output_schema=CandidateProfile,
+        output_schema=ProfileResponse,
         default_tier=ModelTier.CHEAP,
         temperature=0.0,
         max_repairs=1,

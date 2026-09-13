@@ -155,28 +155,28 @@ def test_the_password_is_stored_as_a_hash(http: TestClient) -> None:
 
 def test_settings_show_keys_as_set_or_not_and_never_the_value(http: TestClient) -> None:
     setup(http)
-    key = "sk-or-v1-Qm3vX9pL2rT8wY4nB7kD1hJ6fS0aZ5cE"
+    key = "sk-ant-api03-Qm3vX9pL2rT8wY4nB7kD1hJ6fS0aZ5cE"
 
     saved = http.put(
         "/api/admin/settings",
         json={
             "changes": {
-                "model_provider": "openrouter",
-                "model_cheap_id": "inclusionai/ling-3.0-flash-fin:free",
-                "model_strong_id": "dots-studio/dots-3-note-preview:free",
-                "price_cheap_input": "0",
-                "price_cheap_output": "0",
+                "model_provider": "anthropic",
+                "model_cheap_id": "claude-haiku-4-5",
+                "model_strong_id": "claude-sonnet-5",
+                "price_cheap_input": "1",
+                "price_cheap_output": "5",
             },
-            "keys": {"openrouter": key},
+            "keys": {"anthropic": key},
         },
     )
 
     assert saved.status_code == 200, saved.text
     body = saved.json()
-    assert body["keys_set"] == {"anthropic": False, "openrouter": True}
+    assert body["keys_set"] == {"anthropic": True}
     assert key not in saved.text
-    assert body["effective_provider"] == "openrouter"
-    assert body["values"]["model_cheap_id"] == "inclusionai/ling-3.0-flash-fin:free"
+    assert body["effective_provider"] == "anthropic"
+    assert body["values"]["model_cheap_id"] == "claude-haiku-4-5"
 
 
 def test_a_saved_key_is_sealed_in_the_database(http: TestClient) -> None:
@@ -215,31 +215,32 @@ def test_an_empty_key_field_leaves_the_stored_key_alone(http: TestClient) -> Non
     setup(http)
     http.put(
         "/api/admin/settings",
-        json={"changes": {}, "keys": {"openrouter": "sk-or-Qm3vX9pL2rT8wY4nB7kD1hJ6fS0aZ5cE"}},
+        json={"changes": {}, "keys": {"anthropic": "sk-ant-Qm3vX9pL2rT8wY4nB7kD1hJ6fS0aZ5cE"}},
     )
 
     http.put(
-        "/api/admin/settings", json={"changes": {"reviewer_id": "x"}, "keys": {"openrouter": ""}}
+        "/api/admin/settings", json={"changes": {"reviewer_id": "x"}, "keys": {"anthropic": ""}}
     )
 
-    assert http.get("/api/admin/settings").json()["keys_set"]["openrouter"] is True
+    assert http.get("/api/admin/settings").json()["keys_set"]["anthropic"] is True
 
 
 def test_a_key_can_be_cleared(http: TestClient) -> None:
     setup(http)
     http.put(
         "/api/admin/settings",
-        json={"changes": {}, "keys": {"openrouter": "sk-or-Qm3vX9pL2rT8wY4nB7kD1hJ6fS0aZ5cE"}},
+        json={"changes": {}, "keys": {"anthropic": "sk-ant-Qm3vX9pL2rT8wY4nB7kD1hJ6fS0aZ5cE"}},
     )
 
-    assert http.delete("/api/admin/keys/openrouter").status_code == 204
-    assert http.get("/api/admin/settings").json()["keys_set"]["openrouter"] is False
+    assert http.delete("/api/admin/keys/anthropic").status_code == 204
+    assert http.get("/api/admin/settings").json()["keys_set"]["anthropic"] is False
 
 
 @pytest.mark.parametrize(
     ("changes", "fragment"),
     [
-        ({"model_provider": "openai"}, "Unknown provider"),
+        ({"model_provider": "openrouter"}, "Unknown provider"),
+        ({"model_strong_id": "dots-studio/dots-3-note-preview:free"}, "not a model the provider"),
         ({"price_cheap_input": "lots"}, "number"),
         ({"price_cheap_input": "-1"}, "number"),
         ({"retention_days": "0"}, "at least 1"),
@@ -277,8 +278,8 @@ def test_the_probe_reports_what_the_offline_client_answered(http: TestClient) ->
 
     body = http.post("/api/admin/probe").json()
 
-    assert "message" in body
-    assert body["tier"] == "tier_cheap"
+    assert [probe["tier"] for probe in body] == ["tier_cheap", "tier_strong"]
+    assert all("message" in probe for probe in body)
 
 
 # --- the secrets adapter -----------------------------------------------------------------
@@ -288,8 +289,8 @@ def test_seal_and_open_round_trip() -> None:
     secrets = LocalSecrets("a secret of any shape")
 
     assert (
-        secrets.open(secrets.seal("sk-or-Qm3vX9pL2rT8wY4nB7kD1hJ6"))
-        == "sk-or-Qm3vX9pL2rT8wY4nB7kD1hJ6"
+        secrets.open(secrets.seal("sk-ant-Qm3vX9pL2rT8wY4nB7kD1hJ6"))
+        == "sk-ant-Qm3vX9pL2rT8wY4nB7kD1hJ6"
     )
 
 
