@@ -79,6 +79,7 @@ export default function App() {
     { route: { page: 'admin' } as const, label: 'Settings', icon: Settings, open: false },
   ]
 
+  const visibleLinks = links.filter((link) => link.open || user)
   const guarded = route.page !== 'home' && route.page !== 'login'
   const showLogin = !offline && auth !== null && !auth.user && (route.page === 'login' || guarded)
 
@@ -86,35 +87,33 @@ export default function App() {
     <VocabularyContext.Provider value={vocabulary}>
       <div className="page-wash min-h-dvh">
         <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
-            <a href={href({ page: 'home' })} className="mr-2 inline-flex items-center gap-2 font-heading font-semibold">
+          <div className="mx-auto flex max-w-6xl items-center gap-x-4 px-4 py-2.5">
+            <a href={href({ page: 'home' })} className="mr-2 inline-flex min-h-10 items-center gap-2 font-heading font-semibold">
               <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <ShieldCheck className="size-4" aria-hidden="true" />
               </span>
               Submission Desk
             </a>
-            <nav aria-label="Main" className="flex flex-wrap gap-1">
-              {links
-                .filter((link) => link.open || user)
-                .map(({ route: target, label, icon: Icon }) => {
-                  const active = route.page === target.page
-                  return (
-                    <a
-                      key={label}
-                      href={href(target)}
-                      aria-current={active ? 'page' : undefined}
-                      className={cn(
-                        'inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
-                        active
-                          ? 'bg-secondary text-secondary-foreground'
-                          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
-                      )}
-                    >
-                      <Icon className="size-4" aria-hidden="true" />
-                      {label}
-                    </a>
-                  )
-                })}
+            <nav aria-label="Main" className="hidden gap-1 md:flex">
+              {visibleLinks.map(({ route: target, label, icon: Icon }) => {
+                const active = route.page === target.page
+                return (
+                  <a
+                    key={label}
+                    href={href(target)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+                      active
+                        ? 'bg-secondary text-secondary-foreground'
+                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                    )}
+                  >
+                    <Icon className="size-4" aria-hidden="true" />
+                    {label}
+                  </a>
+                )
+              })}
             </nav>
             <div className="ml-auto flex items-center gap-2">
               {health?.demo_mode && (
@@ -131,10 +130,10 @@ export default function App() {
               </Button>
               {user ? (
                 <>
-                  <span className="hidden text-sm text-muted-foreground sm:inline">{user}</span>
-                  <Button type="button" variant="ghost" size="sm" onClick={signOut}>
+                  <span className="hidden text-sm text-muted-foreground md:inline">{user}</span>
+                  <Button type="button" variant="ghost" size="sm" onClick={signOut} aria-label={`Sign out ${user}`}>
                     <LogOut aria-hidden="true" />
-                    Sign out
+                    <span className="hidden sm:inline">Sign out</span>
                   </Button>
                 </>
               ) : (
@@ -149,7 +148,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 py-8">
+        <main className="mx-auto max-w-6xl px-4 pt-6 pb-28 md:py-8">
           {offline ? (
             <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-4">
               The API is not reachable. Start it with <code>make api</code> and reload.
@@ -181,9 +180,38 @@ export default function App() {
           )}
         </main>
 
-        <footer className="mx-auto max-w-6xl px-4 pb-8 text-xs text-muted-foreground">
+        <footer className="mx-auto hidden max-w-6xl px-4 pb-8 text-xs text-muted-foreground md:block">
           Submission Desk · every quotation shown was checked against its source document.
         </footer>
+
+        {/* The phone's navigation: a tab bar within thumb reach, five tabs at most. */}
+        {!offline && (
+          <nav
+            aria-label="Main"
+            className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+          >
+            <ul className="mx-auto flex max-w-lg">
+              {visibleLinks.map(({ route: target, label, icon: Icon }) => {
+                const active = route.page === target.page
+                return (
+                  <li key={label} className="flex-1">
+                    <a
+                      href={href(target)}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
+                        active ? 'text-primary' : 'text-muted-foreground',
+                      )}
+                    >
+                      <Icon className={cn('size-5', active && 'fill-primary/15')} aria-hidden="true" />
+                      {label}
+                    </a>
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+        )}
       </div>
       <Toaster position="bottom-right" />
     </VocabularyContext.Provider>

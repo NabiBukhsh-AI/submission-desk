@@ -16,6 +16,11 @@ Streamlit interface.
 Or directly: `npm install`, `npm run dev`. `npm run build` writes `dist/`;
 set `VITE_API_BASE` at build time to point a static deployment at the API.
 
+Built for a phone as much as a desk: under 768px the navigation is a bottom
+tab bar within thumb reach, the top bar keeps only the brand, theme and sign
+out, filter rows scroll sideways, every control is at least 44px tall, and no
+page scrolls horizontally at 400px.
+
 Stack: Vite, React 19, TypeScript, Tailwind v4, shadcn/ui on Radix. Type is
 Lexend for headings and Source Sans 3 for text, self-hosted; the palette is a
 trust blue on slate neutrals, light and dark, with a toggle in the header

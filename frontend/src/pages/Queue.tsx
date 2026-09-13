@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Play } from 'lucide-react'
+import { Play, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useVocabulary } from '@/lib/vocabulary'
 import { RolePicker } from '@/components/RolePicker'
@@ -62,6 +62,30 @@ export function Queue() {
       return next
     })
   const toggleAll = () => setSelected(allChosen ? new Set() : new Set(visible.map((run) => run.run_id)))
+  const chosen = visible.filter((run) => selected.has(run.run_id))
+  const deletable = chosen.filter((run) => !run.sample)
+
+  const deleteSelected = async () => {
+    if (deletable.length === 0) return
+    const names = deletable.map((run) => run.candidate_id).join(', ')
+    const plural = deletable.length === 1 ? '' : 's'
+    if (!window.confirm(`Delete ${deletable.length} run${plural} (${names}) and everything recorded about them? This cannot be undone.`)) return
+    setBusy(true)
+    let removed = 0
+    for (const run of deletable) {
+      try {
+        await api.deleteRun(run.run_id)
+        removed += 1
+      } catch (failure) {
+        const why = failure instanceof ApiError ? failure.message : 'could not be deleted.'
+        toast.error(`${run.candidate_id}: ${why}`, { duration: 8000 })
+      }
+    }
+    if (removed > 0) toast.success(`${removed} run${removed === 1 ? '' : 's'} deleted.`)
+    setSelected(new Set())
+    setRows((current) => current?.filter((run) => !deletable.some((gone) => gone.run_id === run.run_id)) ?? current)
+    setBusy(false)
+  }
 
   const runSelected = async () => {
     if (selected.size === 0 || !targetRole) return
@@ -92,7 +116,7 @@ export function Queue() {
             Every candidate the system has read, by what is waiting on you.
           </p>
         </div>
-        <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
+        <div role="group" aria-label="Show" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
           {filters.map((name) => (
             <Button
               key={name}
@@ -100,6 +124,7 @@ export function Queue() {
               variant={name === filter ? 'default' : 'outline'}
               aria-pressed={name === filter}
               onClick={() => setFilter(name)}
+              className="shrink-0"
             >
               {name}
             </Button>
@@ -148,8 +173,19 @@ export function Queue() {
               <Play aria-hidden="true" />
               Run {selected.size > 0 ? selected.size : ''} on this role
             </Button>
-            <span className="text-xs text-muted-foreground">
-              Uses the documents already stored. The same documents on the same role are recognised, not repeated.
+            <Button
+              type="button"
+              variant="outline"
+              onClick={deleteSelected}
+              disabled={busy || deletable.length === 0}
+              title={chosen.length > 0 && deletable.length === 0 ? 'Sample candidates cannot be deleted.' : undefined}
+            >
+              <Trash2 aria-hidden="true" />
+              Delete {deletable.length > 0 ? deletable.length : ''}
+            </Button>
+            <span className="basis-full text-xs text-muted-foreground">
+              Running uses the documents already stored; the same documents on the same role are recognised, not
+              repeated. Sample candidates cannot be deleted.
             </span>
           </div>
 
@@ -164,13 +200,20 @@ export function Queue() {
               >
                 <input
                   type="checkbox"
-                  className="size-4 accent-primary"
+                  className="size-5 accent-primary sm:size-4"
                   checked={selected.has(run.run_id)}
                   onChange={() => toggle(run.run_id)}
                   aria-label={`Select ${run.candidate_id}`}
                 />
                 <div>
-                  <div className="font-medium">{run.candidate_id}</div>
+                  <div className="font-medium">
+                    {run.candidate_id}
+                    {run.sample && (
+                      <Badge variant="secondary" className="ml-2 align-middle">
+                        sample
+                      </Badge>
+                    )}
+                  </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <Badge variant="outline">{run.role_id}</Badge>
                     started {new Date(run.started_at).toLocaleString()}

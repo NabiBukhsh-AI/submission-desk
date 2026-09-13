@@ -63,6 +63,8 @@ export type RunRow = {
   version: number
   chip: Chip
   band_label: string
+  // One of the candidates that ship with the system; cannot be deleted.
+  sample: boolean
 }
 
 export type Provenance = {
@@ -259,6 +261,7 @@ export const api = {
   vocabulary: () => request<Vocabulary>('/api/vocabulary'),
   runs: (filter: string) => request<RunRow[]>(`/api/runs?filter=${encodeURIComponent(filter)}`),
   run: (id: string) => request<Detail>(`/api/runs/${id}`),
+  deleteRun: (id: string) => request<void>(`/api/runs/${id}`, { method: 'DELETE' }),
   passage: (runId: string, evidenceId: string) =>
     request<Passage>(`/api/runs/${runId}/passages/${evidenceId}`),
   preview: (runId: string, overrides: Override[]) =>

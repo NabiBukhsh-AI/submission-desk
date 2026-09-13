@@ -39,6 +39,7 @@ from app.vocabulary import (
 from application.deps import Deps
 from application.recovery import reconcile
 from application.use_cases import admin, rubrics
+from application.use_cases.delete_run import DeleteRefused, delete_run, is_sample
 from application.use_cases.process_batch import process_batch
 from application.use_cases.reassess import candidates_from_runs
 from application.use_cases.recompute_recommendation import recompute
@@ -250,6 +251,15 @@ def rubric_reset(role_id: str, _user: str = Guarded) -> None:
     rebuild()
 
 
+@app.delete("/api/runs/{run_id}", status_code=204)
+def run_delete(run_id: UUID, _user: str = Guarded) -> None:
+    """Remove a candidate's run and the documents nothing else uses."""
+    try:
+        delete_run(deps(), run_id)
+    except DeleteRefused as refused:
+        raise HTTPException(409, str(refused)) from refused
+
+
 class Reassess(BaseModel):
     run_ids: list[UUID]
     role_id: str
@@ -334,6 +344,9 @@ def _run_row(run: Any) -> dict[str, Any]:
         **_json(run),
         "chip": {"label": chip.label, "needs_attention": chip.needs_attention, "help": chip.help},
         "band_label": band_label(run.final_band),
+        # One of the candidates that ship with the system: shown as such, and
+        # the interface does not offer to delete it.
+        "sample": is_sample(deps(), run.run_id),
     }
 
 

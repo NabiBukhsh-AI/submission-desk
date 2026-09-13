@@ -200,3 +200,67 @@ def test_an_unknown_role_is_refused(client: tuple[TestClient, Deps]) -> None:
     )
 
     assert response.status_code == 422
+
+
+# --- deleting ---------------------------------------------------------------------------
+
+
+def test_a_run_can_be_deleted_with_the_documents_nothing_else_uses(
+    client: tuple[TestClient, Deps],
+) -> None:
+    http, deps = client
+    first = process_candidate(_candidate(deps), "ai-engineer", deps)
+    sha = deps.candidates.documents_for_run(first.run_id)[0].document_sha256
+    assert deps.blobs.exists(sha)
+
+    assert http.delete(f"/api/runs/{first.run_id}").status_code == 204
+
+    assert http.get(f"/api/runs/{first.run_id}").status_code == 404
+    assert not deps.blobs.exists(sha)
+
+
+def test_a_document_another_run_still_uses_is_kept(client: tuple[TestClient, Deps]) -> None:
+    http, deps = client
+    candidate = _candidate(deps)
+    first = process_candidate(candidate, "ai-engineer", deps)
+    second = process_candidate(candidate, "fullstack-developer", deps)
+    sha = deps.candidates.documents_for_run(first.run_id)[0].document_sha256
+
+    http.delete(f"/api/runs/{first.run_id}")
+
+    assert deps.blobs.exists(sha)
+    assert http.get(f"/api/runs/{second.run_id}").status_code == 200
+
+
+def test_a_sample_candidate_cannot_be_deleted(
+    client: tuple[TestClient, Deps], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The demo candidates are recognised by the hashes of their documents,
+    not by their names, so renaming one changes nothing."""
+    http, deps = client
+    first = process_candidate(_candidate(deps), "ai-engineer", deps)
+    sha = deps.candidates.documents_for_run(first.run_id)[0].document_sha256
+    monkeypatch.setattr(
+        api_module, "_deps", Deps(**{**deps.__dict__, "sample_hashes": lambda: frozenset({sha})})
+    )
+
+    rows = http.get("/api/runs", params={"filter": "Needs attention"}).json()
+    response = http.delete(f"/api/runs/{first.run_id}")
+
+    assert rows[0]["sample"] is True
+    assert response.status_code == 409
+    assert "sample" in response.json()["detail"]
+    assert http.get(f"/api/runs/{first.run_id}").status_code == 200
+
+
+def test_a_run_still_being_processed_cannot_be_deleted(client: tuple[TestClient, Deps]) -> None:
+    http, deps = client
+    first = process_candidate(_candidate(deps), "ai-engineer", deps)
+    from domain.contracts.enums import RunStatus
+
+    deps.runs.set_status(first.run_id, RunStatus.ASSESSED)
+
+    response = http.delete(f"/api/runs/{first.run_id}")
+
+    assert response.status_code == 409
+    assert "still being processed" in response.json()["detail"]

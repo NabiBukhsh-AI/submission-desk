@@ -147,6 +147,17 @@ so a half-edited role can never be run. A saved rubric lives in the database
 and wins over the file of the same name; **Reset to file** returns to the
 shipped version. "Show as YAML" renders the same rubric in the file's form.
 
+### Deleting a candidate
+
+Select candidates in the queue and **Delete**, or **Delete** on the review
+page. The run and every row recorded against it go; a document goes with it
+unless another run still refers to it. Two refusals: a run the pipeline is
+still working on (wait, or let the reconciler mark it interrupted), and the
+sample candidates that ship with the system, which are recognised by the
+content hashes of their documents and shown with a *sample* badge. The
+retention purge (`submission-desk purge`) is the scheduled form of the same
+removal.
+
 ### Running candidates again
 
 In the queue, select candidates and choose a role: their stored documents go

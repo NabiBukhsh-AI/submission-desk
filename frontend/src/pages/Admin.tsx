@@ -150,7 +150,7 @@ export function Admin() {
       <Card>
         <CardHeader>
           <CardTitle>Provider</CardTitle>
-          <CardDescription>Who answers the model calls. Currently in force: {PROVIDER_LABELS[view.effective_provider]}.</CardDescription>
+          <CardDescription>Who answers the model calls. Currently in force: {PROVIDER_LABELS[view.effective_provider] ?? view.effective_provider}.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">

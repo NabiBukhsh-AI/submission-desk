@@ -61,6 +61,22 @@ DELIVERY_PREDECESSORS: frozenset[RunStatus] = frozenset(
     {RunStatus.APPROVED, RunStatus.DELIVERY_PENDING_RETRY}
 )
 
+#: States the pipeline itself moves a run through. A run in one of these may
+#: have a worker on it right now; INTERRUPTED and the review states do not.
+IN_FLIGHT: frozenset[RunStatus] = frozenset(
+    {
+        RunStatus.CREATED,
+        RunStatus.INTAKE_OK,
+        RunStatus.EXTRACTED,
+        RunStatus.SANITIZED,
+        RunStatus.STRUCTURED,
+        RunStatus.CALIBRATED,
+        RunStatus.ASSESSED,
+        RunStatus.AGGREGATED,
+        RunStatus.COMPOSED,
+    }
+)
+
 #: States a reviewer can open and act on.
 REVIEWABLE: frozenset[RunStatus] = frozenset(
     {RunStatus.READY_FOR_REVIEW, RunStatus.NEEDS_REVIEW, RunStatus.QUARANTINED}

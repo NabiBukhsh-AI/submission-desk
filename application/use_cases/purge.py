@@ -70,15 +70,29 @@ def purge(
             summary.blobs_removed += len(documents)
             continue
 
-        deps.runs.delete(run.run_id)
-
-        for document in documents:
-            sha = document.document_sha256
-            if deps.candidates.sha_referenced(sha):
-                summary.blobs_kept += 1
-                continue
-            deps.candidates.delete_source_texts(sha)
-            if deps.blobs.delete(sha):
-                summary.blobs_removed += 1
+        removed, kept = remove_run(deps, run.run_id)
+        summary.blobs_removed += removed
+        summary.blobs_kept += kept
 
     return summary
+
+
+def remove_run(deps: Deps, run_id: UUID) -> tuple[int, int]:
+    """The run and every row against it, then the documents nothing else uses.
+
+    Returns how many documents were removed and how many were kept because
+    another run still refers to them.
+    """
+    documents = deps.candidates.documents_for_run(run_id)
+    deps.runs.delete(run_id)
+
+    removed = kept = 0
+    for document in documents:
+        sha = document.document_sha256
+        if deps.candidates.sha_referenced(sha):
+            kept += 1
+            continue
+        deps.candidates.delete_source_texts(sha)
+        if deps.blobs.delete(sha):
+            removed += 1
+    return removed, kept

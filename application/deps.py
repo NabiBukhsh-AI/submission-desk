@@ -190,6 +190,10 @@ class Deps:
     rubric_loader: Callable[[str], Any] | None = None
     #: Operator settings and the admin account, written from the admin page.
     settings_store: Any = None
+    #: The content hashes of the sample documents that ship with the system,
+    #: as a callable so the corpus is read only when a deletion asks. A run
+    #: whose documents are all samples is the demo, and the demo stays.
+    sample_hashes: Callable[[], frozenset[str]] | None = None
     #: Seals secrets at rest and hashes passwords. A port, so the use cases
     #: that manage the admin account never see a cipher.
     secrets: Any = None

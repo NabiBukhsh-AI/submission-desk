@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookOpenCheck, Copy, FileCode2, Plus, RotateCcw, Save, Trash2 } from 'lucide-react'
+import { BookOpenCheck, ChevronDown, Copy, FileCode2, Plus, RotateCcw, Save, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -166,8 +166,11 @@ export function Roles({ roleId }: { roleId?: string }) {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
-        <nav aria-label="Roles" className="space-y-1 self-start lg:sticky lg:top-20">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[16rem_1fr]">
+        <nav
+          aria-label="Roles"
+          className="-mx-4 flex min-w-0 gap-2 overflow-x-auto px-4 pb-1 lg:sticky lg:top-20 lg:mx-0 lg:block lg:space-y-1 lg:self-start lg:px-0"
+        >
           {roles === null ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (
@@ -177,7 +180,7 @@ export function Roles({ roleId }: { roleId?: string }) {
                 href={href({ page: 'roles', roleId: role.role_id })}
                 aria-current={role.role_id === roleId ? 'page' : undefined}
                 className={cn(
-                  'block rounded-lg border px-3 py-2.5 transition-colors',
+                  'block shrink-0 rounded-lg border px-3 py-2.5 transition-colors',
                   role.role_id === roleId ? 'border-primary/50 bg-primary/5' : 'bg-card hover:border-primary/30',
                 )}
               >
@@ -201,7 +204,7 @@ export function Roles({ roleId }: { roleId?: string }) {
             </span>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             <Card>
               <CardHeader>
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -270,10 +273,18 @@ export function Roles({ roleId }: { roleId?: string }) {
             <ol className="space-y-4">
               {data.criteria.map((criterion, index) => (
                 <li key={index}>
-                  <Card>
-                    <CardContent className="grid gap-4 sm:grid-cols-6">
-                      <div className="flex items-center justify-between sm:col-span-6">
-                        <span className="font-heading text-xs text-muted-foreground">Requirement {index + 1}</span>
+                  <details className="group rounded-xl border bg-card" open={!criterion.label}>
+                    <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                      <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+                      <span className="font-heading text-xs text-muted-foreground">{index + 1}</span>
+                      <span className="min-w-0 flex-1 truncate font-medium">{criterion.label || 'New requirement'}</span>
+                      <Badge variant="outline" className="hidden shrink-0 sm:inline-flex">
+                        {KINDS.find((kind) => kind.value === criterion.kind)?.label}
+                      </Badge>
+                      <span className="shrink-0 text-xs text-muted-foreground">weight {criterion.weight}</span>
+                    </summary>
+                    <div className="grid gap-4 border-t px-4 py-4 sm:grid-cols-6">
+                      <div className="flex items-center justify-end sm:col-span-6">
                         <Button
                           type="button"
                           variant="ghost"
@@ -370,8 +381,8 @@ export function Roles({ roleId }: { roleId?: string }) {
                           onChange={(event) => updateCriterion(index, { negative_examples: fromLines(event.target.value) })}
                         />
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </details>
                 </li>
               ))}
             </ol>
@@ -404,7 +415,7 @@ export function Roles({ roleId }: { roleId?: string }) {
               </CardContent>
             </Card>
 
-            <div className="sticky bottom-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card/95 p-3 shadow-sm backdrop-blur">
+            <div className="sticky bottom-20 flex flex-wrap items-center gap-3 rounded-xl border bg-card/95 p-3 shadow-sm backdrop-blur md:bottom-4">
               <Button type="button" onClick={() => save()} disabled={busy || !dirty}>
                 <Save aria-hidden="true" />
                 Save role

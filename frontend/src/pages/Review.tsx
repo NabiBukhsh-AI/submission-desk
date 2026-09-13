@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Info, OctagonAlert, TriangleAlert } from 'lucide-react'
+import { CheckCircle2, Info, OctagonAlert, Trash2, TriangleAlert } from 'lucide-react'
+import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { navigate } from '@/lib/router'
 import { useVocabulary } from '@/lib/vocabulary'
 import { Decision } from '@/components/Decision'
 import { Evidence } from '@/components/Evidence'
@@ -7,7 +11,7 @@ import { StatusChip } from '@/components/StatusChip'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { api, type Detail, type Health, type Recommendation, type Report } from '@/lib/api'
+import { ApiError, api, type Detail, type Health, type Recommendation, type Report } from '@/lib/api'
 
 export function Review({ runId, health }: { runId: string; health: Health | null }) {
   const [detail, setDetail] = useState<Detail | null>(null)
@@ -39,17 +43,43 @@ export function Review({ runId, health }: { runId: string; health: Health | null
   const { run, rubric, banner, recommendation, assessments, reports } = detail
   const blockers = rubric.criteria.filter((item) => item.kind === 'blocker').map((item) => item.id)
 
+  const remove = async () => {
+    if (!window.confirm(`Delete ${run.candidate_id} and everything recorded about this run? This cannot be undone.`)) return
+    try {
+      await api.deleteRun(run.run_id)
+      toast.success(`${run.candidate_id} was deleted.`)
+      navigate({ page: 'queue' })
+    } catch (failure) {
+      toast.error(failure instanceof ApiError ? failure.message : 'The run could not be deleted.', { duration: 8000 })
+    }
+  }
+
   return (
     <article className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{run.candidate_id}</h1>
-        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-          <span>{rubric.role_title}</span>
-          <span aria-hidden="true">·</span>
-          <StatusChip status={run.status} chip={run.chip} />
-          <span aria-hidden="true">·</span>
-          <span>run {run.run_id.slice(0, 8)}</span>
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {run.candidate_id}
+            {run.sample && (
+              <Badge variant="secondary" className="ml-2 align-middle">
+                sample
+              </Badge>
+            )}
+          </h1>
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <span>{rubric.role_title}</span>
+            <span aria-hidden="true">·</span>
+            <StatusChip status={run.status} chip={run.chip} />
+            <span aria-hidden="true">·</span>
+            <span>run {run.run_id.slice(0, 8)}</span>
+          </p>
+        </div>
+        {!run.sample && (
+          <Button type="button" variant="outline" size="sm" onClick={remove}>
+            <Trash2 aria-hidden="true" />
+            Delete
+          </Button>
+        )}
       </header>
 
       <IntegrityBanner tier={banner.tier} message={banner.message} reports={reports} />
